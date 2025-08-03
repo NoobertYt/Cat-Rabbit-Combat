@@ -88,11 +88,6 @@
 <body class="bg-gradient-to-br from-pink-100 to-purple-200 min-h-screen flex flex-col items-center justify-center p-6 gap-6">
 
   <div id="user-id">ID: <span id="uid"></span></div>
-  <script>
-    const uid = localStorage.getItem("user_id") || Math.floor(100000 + Math.random() * 900000);
-    localStorage.setItem("user_id", uid);
-    document.getElementById("uid").innerText = uid;
-  </script>
 
   <div class="bg-white shadow-2xl rounded-2xl p-4 w-full max-w-sm text-center">
     <img id="kotokrolik-img" src="images/kotokrolik.jpg" class="kotokrolik w-48 h-48 mx-auto rounded-full border-4 border-purple-300 shadow-lg cursor-pointer" onclick="tap()">
@@ -167,8 +162,10 @@
   </div>
 
   <script>
-    const WEBHOOK_URL = "https://discord.com/api/webhooks/1340000403462422528/1on5uXxAxOrHfdMWtVlboXGJIAOpbg0dyHs8ovPKysDHZEIg4IuIiCSRj7ErXGefGP18";
-    const userId = localStorage.getItem("user_id") || "unknown";
+    // Инициализация данных игры
+    const userId = localStorage.getItem("user_id") || Math.floor(100000 + Math.random() * 900000);
+    localStorage.setItem("user_id", userId);
+    document.getElementById("uid").innerText = userId;
 
     const skins = [
       { id: 0, name: "Котокролик 🐰😼", image: "images/kotokrolik.jpg", owned: true, price: 0 },
@@ -181,6 +178,7 @@
       { id: 2, name: "Магазин электроники 📱", price: 2000, income: 20, owned: false }
     ];
 
+    // Загрузка сохранённых данных
     let score = parseInt(localStorage.getItem("score")) || 0;
     let maxEnergy = parseInt(localStorage.getItem("maxEnergy")) || 100;
     let energy = parseInt(localStorage.getItem("energy")) || maxEnergy;
@@ -193,12 +191,13 @@
     let energyUpgradeLevel = parseInt(localStorage.getItem("energyUpgradeLevel")) || 0;
     let energyUpgradeCost = parseInt(localStorage.getItem("energyUpgradeCost")) || 50;
 
-    // Загрузка owned для бизнесов
+    // Загрузка бизнесов
     businesses.forEach(b => {
       const ownedStored = localStorage.getItem(`business-owned-${b.id}`);
       if (ownedStored !== null) b.owned = ownedStored === "true";
     });
 
+    // Функция сохранения игры
     function saveGame() {
       localStorage.setItem("score", score);
       localStorage.setItem("energy", energy);
@@ -214,25 +213,29 @@
       });
     }
 
+    // Обновление интерфейса
     function updateScore() {
       document.getElementById("score").innerText = `Kotokrocoin: ${score} 🪙`;
     }
+
     function updateEnergy() {
       document.getElementById("energy").innerText = `Энергия: ${energy}/${maxEnergy} ⚡`;
     }
+
     function updateSkin() {
       const img = document.getElementById("kotokrolik-img");
       img.src = skins[currentSkin].image;
       document.getElementById("kotokrolik-name").innerText = skins[currentSkin].name;
     }
+
     function updateUpgradeDisplay() {
       document.getElementById("upgrade-level").innerText = upgradeLevel;
       document.getElementById("upgrade-cost").innerText = upgradeCost;
-
       document.getElementById("energy-upgrade-level").innerText = energyUpgradeLevel;
       document.getElementById("energy-upgrade-cost").innerText = energyUpgradeCost;
     }
 
+    // Клик по коту
     function tap() {
       if (energy > 0) {
         score += coinsPerClick;
@@ -241,10 +244,33 @@
         updateEnergy();
         saveGame();
       } else {
-        alert("Недостаточно энергии для клика. Улучши энергию или подожди восстановления.");
+        alert("Недостаточно энергии! Подожди немного.");
       }
     }
 
+    // Восстановление энергии
+    setInterval(() => {
+      if (energy < maxEnergy) {
+        energy += 1; // +1 энергия каждую секунду
+        updateEnergy();
+        saveGame();
+      }
+    }, 1000);
+
+    // Доход от бизнесов
+    setInterval(() => {
+      let income = 0;
+      businesses.forEach(b => {
+        if (b.owned) income += b.income;
+      });
+      if (income > 0) {
+        score += income;
+        updateScore();
+        saveGame();
+      }
+    }, 1000);
+
+    // Магазины
     function toggleShop(shopName) {
       ["upgrades", "skins", "businesses"].forEach(name => {
         document.getElementById(`shop-${name}`).classList.add("hidden");
@@ -258,13 +284,13 @@
         score -= upgradeCost;
         coinsPerClick++;
         upgradeLevel++;
-        upgradeCost *= 2;
+        upgradeCost = Math.floor(upgradeCost * 1.5);
         updateScore();
         updateUpgradeDisplay();
         saveGame();
-        alert(`Апгрейд клика куплен! Теперь за клик даётся ${coinsPerClick} монет.`);
+        alert(`Улучшение куплено! Теперь за клик: ${coinsPerClick} монет`);
       } else {
-        alert("Недостаточно монет для покупки апгрейда клика.");
+        alert("Недостаточно монет!");
       }
     });
 
@@ -274,19 +300,19 @@
         score -= energyUpgradeCost;
         energyUpgradeLevel++;
         maxEnergy += 20;
-        energy = maxEnergy; // Заполняем энергию после улучшения
-        energyUpgradeCost *= 2;
+        energy = maxEnergy; // Полное восстановление
+        energyUpgradeCost = Math.floor(energyUpgradeCost * 1.5);
         updateScore();
         updateEnergy();
         updateUpgradeDisplay();
         saveGame();
-        alert(`Максимальная энергия увеличена! Теперь максимум ${maxEnergy} ⚡.`);
+        alert(`Макс. энергия увеличена до ${maxEnergy}!`);
       } else {
-        alert("Недостаточно монет для покупки апгрейда энергии.");
+        alert("Недостаточно монет!");
       }
     });
 
-    // Отрисовка скинов в магазине
+    // Отрисовка скинов
     function renderSkins() {
       const skinsList = document.getElementById("skins-list");
       skinsList.innerHTML = "";
@@ -296,73 +322,65 @@
 
         const preview = document.createElement("img");
         preview.src = skin.image;
-        preview.alt = skin.name;
         preview.className = "skin-preview";
 
         const info = document.createElement("div");
-        info.innerHTML = `<strong>${skin.name}</strong><br />${skin.owned ? "Владеешь" : `Цена: ${skin.price} 🪙`}`;
+        info.innerHTML = `<strong>${skin.name}</strong><br>${skin.owned ? "✓ Куплено" : `Цена: ${skin.price} 🪙`}`;
 
         const btn = document.createElement("button");
-        btn.id = `buy-skin-${i}-btn`;
-
-        btn.innerText = skin.owned ? "Выбрать" : "Купить";
+        btn.textContent = skin.owned ? (currentSkin === i ? "Выбрано" : "Выбрать") : "Купить";
+        btn.disabled = skin.owned && currentSkin === i;
 
         btn.addEventListener("click", () => {
           if (skin.owned) {
             currentSkin = i;
             updateSkin();
             saveGame();
-            alert(`Скин "${skin.name}" выбран.`);
+            renderSkins();
+          } else if (score >= skin.price) {
+            score -= skin.price;
+            skin.owned = true;
+            currentSkin = i;
+            updateScore();
+            updateSkin();
+            saveGame();
+            renderSkins();
           } else {
-            if (score >= skin.price) {
-              score -= skin.price;
-              skin.owned = true;
-              currentSkin = i;
-              updateSkin();
-              updateScore();
-              saveGame();
-              renderSkins();
-              alert(`Скин "${skin.name}" куплен и выбран.`);
-            } else {
-              alert("Недостаточно монет для покупки скина.");
-            }
+            alert("Недостаточно монет!");
           }
         });
 
         div.appendChild(preview);
         div.appendChild(info);
         div.appendChild(btn);
-
         skinsList.appendChild(div);
       });
-      updateSkin();
     }
 
-    // Отрисовка бизнесов в магазине
+    // Отрисовка бизнесов
     function renderBusinesses() {
       const busList = document.getElementById("businesses-list");
       busList.innerHTML = "";
-      businesses.forEach((bus) => {
+      businesses.forEach(bus => {
         const div = document.createElement("div");
         div.className = "shop-item";
 
         const info = document.createElement("div");
-        info.innerHTML = `<strong>${bus.name}</strong><br />Цена: ${bus.price} 🪙<br />Доход: ${bus.income} 🪙/сек`;
+        info.innerHTML = `<strong>${bus.name}</strong><br>Цена: ${bus.price} 🪙<br>Доход: ${bus.income} 🪙/сек`;
 
         const btn = document.createElement("button");
-        btn.innerText = bus.owned ? "Куплено" : "Купить";
+        btn.textContent = bus.owned ? "✓ Куплено" : "Купить";
         btn.disabled = bus.owned;
 
         btn.addEventListener("click", () => {
-          if (score >= bus.price && !bus.owned) {
+          if (score >= bus.price) {
             score -= bus.price;
             bus.owned = true;
             updateScore();
             saveGame();
             renderBusinesses();
-            alert(`Бизнес "${bus.name}" куплен!`);
-          } else if (!bus.owned) {
-            alert("Недостаточно монет для покупки бизнеса.");
+          } else {
+            alert("Недостаточно монет!");
           }
         });
 
@@ -372,41 +390,25 @@
       });
     }
 
-    // Доход от бизнесов каждую секунду
-    setInterval(() => {
-      let income = 0;
-      businesses.forEach(b => {
-        if (b.owned) income += b.income;
-      });
-      if (income > 0) {
-        score += income;
-        updateScore();
-        saveGame();
-      }
-    }, 1000);
-
-    // Airdrop modal функции
+    // Airdrop
     function openAirdrop() {
       document.getElementById("airdrop-id").value = userId;
       document.getElementById("airdrop-modal").classList.add("active");
     }
+
     function closeAirdrop() {
       document.getElementById("airdrop-modal").classList.remove("active");
     }
+
     document.getElementById("airdrop-form").addEventListener("submit", (e) => {
       e.preventDefault();
-      const reason = document.getElementById("airdrop-reason").value.trim();
-      const amount = parseInt(document.getElementById("airdrop-amount").value);
-      if (!reason || isNaN(amount) || amount <= 0) {
-        alert("Пожалуйста, заполните все поля корректно.");
-        return;
-      }
-      // Здесь можно отправить данные на сервер или в Discord webhook
-      alert(`Запрос отправлен!\nID: ${userId}\nПричина: ${reason}\nКоличество: ${amount}`);
+      const reason = document.getElementById("airdrop-reason").value;
+      const amount = document.getElementById("airdrop-amount").value;
+      alert(`Запрос отправлен!\nID: ${userId}\nПричина: ${reason}\nСумма: ${amount} 🪙`);
       closeAirdrop();
     });
 
-    // Инициализация
+    // Инициализация игры
     function init() {
       updateScore();
       updateEnergy();
@@ -415,9 +417,8 @@
       renderBusinesses();
       updateSkin();
     }
+
     init();
-
   </script>
-
 </body>
 </html>
