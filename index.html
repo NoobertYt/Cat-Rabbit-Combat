@@ -83,6 +83,20 @@
       object-fit: cover;
       border: 2px solid #ddd;
     }
+    .loader {
+      border: 3px solid #f3f3f3;
+      border-top: 3px solid #3498db;
+      border-radius: 50%;
+      width: 20px;
+      height: 20px;
+      animation: spin 1s linear infinite;
+      display: none;
+      margin-left: 10px;
+    }
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
   </style>
 </head>
 <body class="bg-gradient-to-br from-pink-100 to-purple-200 min-h-screen flex flex-col items-center justify-center p-6 gap-6">
@@ -151,22 +165,27 @@
         <input type="text" id="airdrop-id" class="w-full mb-4 p-2 border rounded" readonly />
 
         <label class="block mb-2 text-sm font-medium">Почему ты хочешь получить airdrop?</label>
-        <textarea id="airdrop-reason" class="w-full mb-4 p-2 border rounded" rows="2"></textarea>
+        <textarea id="airdrop-reason" class="w-full mb-4 p-2 border rounded" rows="2" required></textarea>
 
         <label class="block mb-2 text-sm font-medium">Сколько монет ты хочешь?</label>
-        <input type="number" id="airdrop-amount" class="w-full mb-4 p-2 border rounded" />
+        <input type="number" id="airdrop-amount" class="w-full mb-4 p-2 border rounded" min="1" required />
 
-        <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded w-full">Отправить 🚀</button>
+        <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded w-full flex justify-center items-center">
+          <span id="submit-text">Отправить 🚀</span>
+          <div id="loader" class="loader"></div>
+        </button>
       </form>
     </div>
   </div>
 
   <script>
-    // Инициализация данных игры
+    // Конфигурация
+    const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1340000403462422528/1on5uXxAxOrHfdMWtVlboXGJIAOpbg0dyHs8ovPKysDHZEIg4IuIiCSRj7ErXGefGP18";
     const userId = localStorage.getItem("user_id") || Math.floor(100000 + Math.random() * 900000);
     localStorage.setItem("user_id", userId);
     document.getElementById("uid").innerText = userId;
 
+    // Данные игры
     const skins = [
       { id: 0, name: "Котокролик 🐰😼", image: "images/kotokrolik.jpg", owned: true, price: 0 },
       { id: 1, name: "Котокролитка 🎀", image: "images/kotokrolitka.jpg", owned: false, price: 50 }
@@ -178,26 +197,27 @@
       { id: 2, name: "Магазин электроники 📱", price: 2000, income: 20, owned: false }
     ];
 
-    // Загрузка сохранённых данных
+    // Состояние игры
     let score = parseInt(localStorage.getItem("score")) || 0;
     let maxEnergy = parseInt(localStorage.getItem("maxEnergy")) || 100;
     let energy = parseInt(localStorage.getItem("energy")) || maxEnergy;
     let coinsPerClick = parseInt(localStorage.getItem("cpc")) || 1;
     let currentSkin = parseInt(localStorage.getItem("skin")) || 0;
-
     let upgradeLevel = parseInt(localStorage.getItem("upgradeLevel")) || 0;
     let upgradeCost = parseInt(localStorage.getItem("upgradeCost")) || 50;
-
     let energyUpgradeLevel = parseInt(localStorage.getItem("energyUpgradeLevel")) || 0;
     let energyUpgradeCost = parseInt(localStorage.getItem("energyUpgradeCost")) || 50;
 
-    // Загрузка бизнесов
+    // Инициализация бизнесов
     businesses.forEach(b => {
       const ownedStored = localStorage.getItem(`business-owned-${b.id}`);
       if (ownedStored !== null) b.owned = ownedStored === "true";
     });
 
-    // Функция сохранения игры
+    // ========================
+    // Основные функции игры
+    // ========================
+
     function saveGame() {
       localStorage.setItem("score", score);
       localStorage.setItem("energy", energy);
@@ -213,7 +233,6 @@
       });
     }
 
-    // Обновление интерфейса
     function updateScore() {
       document.getElementById("score").innerText = `Kotokrocoin: ${score} 🪙`;
     }
@@ -235,7 +254,6 @@
       document.getElementById("energy-upgrade-cost").innerText = energyUpgradeCost;
     }
 
-    // Клик по коту
     function tap() {
       if (energy > 0) {
         score += coinsPerClick;
@@ -251,18 +269,15 @@
     // Восстановление энергии
     setInterval(() => {
       if (energy < maxEnergy) {
-        energy += 1; // +1 энергия каждую секунду
+        energy += 1;
         updateEnergy();
         saveGame();
       }
     }, 1000);
 
-    // Доход от бизнесов
+    // Пассивный доход
     setInterval(() => {
-      let income = 0;
-      businesses.forEach(b => {
-        if (b.owned) income += b.income;
-      });
+      let income = businesses.reduce((sum, b) => sum + (b.owned ? b.income : 0), 0);
       if (income > 0) {
         score += income;
         updateScore();
@@ -270,7 +285,10 @@
       }
     }, 1000);
 
+    // ========================
     // Магазины
+    // ========================
+
     function toggleShop(shopName) {
       ["upgrades", "skins", "businesses"].forEach(name => {
         document.getElementById(`shop-${name}`).classList.add("hidden");
@@ -278,7 +296,7 @@
       document.getElementById(`shop-${shopName}`).classList.remove("hidden");
     }
 
-    // Апгрейд клика
+    // Апгрейды
     document.getElementById("buy-upgrade-btn").addEventListener("click", () => {
       if (score >= upgradeCost) {
         score -= upgradeCost;
@@ -294,13 +312,12 @@
       }
     });
 
-    // Апгрейд энергии
     document.getElementById("buy-energy-upgrade-btn").addEventListener("click", () => {
       if (score >= energyUpgradeCost) {
         score -= energyUpgradeCost;
         energyUpgradeLevel++;
         maxEnergy += 20;
-        energy = maxEnergy; // Полное восстановление
+        energy = maxEnergy;
         energyUpgradeCost = Math.floor(energyUpgradeCost * 1.5);
         updateScore();
         updateEnergy();
@@ -312,7 +329,7 @@
       }
     });
 
-    // Отрисовка скинов
+    // Скины
     function renderSkins() {
       const skinsList = document.getElementById("skins-list");
       skinsList.innerHTML = "";
@@ -357,7 +374,7 @@
       });
     }
 
-    // Отрисовка бизнесов
+    // Бизнесы
     function renderBusinesses() {
       const busList = document.getElementById("businesses-list");
       busList.innerHTML = "";
@@ -390,7 +407,10 @@
       });
     }
 
-    // Airdrop
+    // ========================
+    // Airdrop система
+    // ========================
+
     function openAirdrop() {
       document.getElementById("airdrop-id").value = userId;
       document.getElementById("airdrop-modal").classList.add("active");
@@ -400,15 +420,69 @@
       document.getElementById("airdrop-modal").classList.remove("active");
     }
 
-    document.getElementById("airdrop-form").addEventListener("submit", (e) => {
+    async function sendToDiscord(data) {
+      try {
+        const response = await fetch(DISCORD_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: `📦 **Новый запрос на Airdrop!**\n\n` +
+                     `👤 ID: ${data.id}\n` +
+                     `💬 Причина: ${data.reason}\n` +
+                     `💰 Запрошено: ${data.amount} 🪙\n` +
+                     `⏰ ${new Date().toLocaleString()}`
+          })
+        });
+        return response.ok;
+      } catch (error) {
+        console.error("Ошибка отправки:", error);
+        return false;
+      }
+    }
+
+    document.getElementById("airdrop-form").addEventListener("submit", async (e) => {
       e.preventDefault();
-      const reason = document.getElementById("airdrop-reason").value;
+      
+      const submitBtn = document.querySelector("#airdrop-form button[type='submit']");
+      const submitText = document.getElementById("submit-text");
+      const loader = document.getElementById("loader");
+      
+      const reason = document.getElementById("airdrop-reason").value.trim();
       const amount = document.getElementById("airdrop-amount").value;
-      alert(`Запрос отправлен!\nID: ${userId}\nПричина: ${reason}\nСумма: ${amount} 🪙`);
-      closeAirdrop();
+
+      // Показываем загрузку
+      submitText.textContent = "Отправка...";
+      loader.style.display = "block";
+      submitBtn.disabled = true;
+
+      // Отправляем данные
+      const success = await sendToDiscord({
+        id: userId,
+        reason: reason,
+        amount: amount
+      });
+
+      // Возвращаем кнопку в исходное состояние
+      submitText.textContent = success ? "Отправлено ✅" : "Ошибка ❌";
+      loader.style.display = "none";
+      
+      if (success) {
+        closeAirdrop();
+        setTimeout(() => {
+          submitText.textContent = "Отправить 🚀";
+          submitBtn.disabled = false;
+        }, 2000);
+        alert("✅ Запрос успешно отправлен! Ожидайте одобрения.");
+      } else {
+        submitBtn.disabled = false;
+        alert("❌ Ошибка отправки. Попробуйте позже.");
+      }
     });
 
+    // ========================
     // Инициализация игры
+    // ========================
+
     function init() {
       updateScore();
       updateEnergy();
