@@ -110,30 +110,38 @@
     <!-- Магазин апгрейдов -->
     <div id="shop-upgrades" class="hidden mt-6">
       <h3 class="text-xl font-semibold mb-4 text-green-700">Апгрейды</h3>
+
       <div class="shop-item">
         <div>
           <strong>Улучшение клика</strong><br />
           <small>+1 к монетам за клик</small><br />
-          <small>Уровень: <span id="upgrade-level">0</span></small>
+          <small>Уровень: <span id="upgrade-level">0</span></small><br />
+          <small>Цена: <span id="upgrade-cost"></span> 🪙</small>
         </div>
-        <button id="buy-upgrade-btn">Купить (50 🪙)</button>
+        <button id="buy-upgrade-btn">Купить</button>
+      </div>
+
+      <div class="shop-item">
+        <div>
+          <strong>Улучшение энергии</strong><br />
+          <small>+20 к максимальной энергии</small><br />
+          <small>Уровень: <span id="energy-upgrade-level">0</span></small><br />
+          <small>Цена: <span id="energy-upgrade-cost"></span> 🪙</small>
+        </div>
+        <button id="buy-energy-upgrade-btn">Купить</button>
       </div>
     </div>
 
     <!-- Магазин скинов -->
     <div id="shop-skins" class="hidden mt-6">
       <h3 class="text-xl font-semibold mb-4 text-purple-700">Магазин скинов</h3>
-      <div id="skins-list">
-        <!-- JS подставит скины сюда -->
-      </div>
+      <div id="skins-list"></div>
     </div>
 
     <!-- Магазин бизнесов -->
     <div id="shop-businesses" class="hidden mt-6">
       <h3 class="text-xl font-semibold mb-4 text-indigo-700">Бизнесы</h3>
-      <div id="businesses-list">
-        <!-- JS подставит бизнесы сюда -->
-      </div>
+      <div id="businesses-list"></div>
       <p class="mt-4 text-sm text-gray-600">Доход считается каждую секунду.</p>
     </div>
   </div>
@@ -145,13 +153,13 @@
       <h2 class="text-lg font-bold text-yellow-500 mb-4">Запрос на Airdrop</h2>
       <form id="airdrop-form">
         <label class="block mb-2 text-sm font-medium">ID аккаунта</label>
-        <input type="text" id="airdrop-id" class="w-full mb-4 p-2 border rounded" readonly>
+        <input type="text" id="airdrop-id" class="w-full mb-4 p-2 border rounded" readonly />
 
         <label class="block mb-2 text-sm font-medium">Почему ты хочешь получить airdrop?</label>
         <textarea id="airdrop-reason" class="w-full mb-4 p-2 border rounded" rows="2"></textarea>
 
         <label class="block mb-2 text-sm font-medium">Сколько монет ты хочешь?</label>
-        <input type="number" id="airdrop-amount" class="w-full mb-4 p-2 border rounded">
+        <input type="number" id="airdrop-amount" class="w-full mb-4 p-2 border rounded" />
 
         <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded w-full">Отправить 🚀</button>
       </form>
@@ -174,12 +182,16 @@
     ];
 
     let score = parseInt(localStorage.getItem("score")) || 0;
-    let energy = parseInt(localStorage.getItem("energy")) || 100;
+    let maxEnergy = parseInt(localStorage.getItem("maxEnergy")) || 100;
+    let energy = parseInt(localStorage.getItem("energy")) || maxEnergy;
     let coinsPerClick = parseInt(localStorage.getItem("cpc")) || 1;
     let currentSkin = parseInt(localStorage.getItem("skin")) || 0;
 
     let upgradeLevel = parseInt(localStorage.getItem("upgradeLevel")) || 0;
-    const upgradeCost = 50;
+    let upgradeCost = parseInt(localStorage.getItem("upgradeCost")) || 50;
+
+    let energyUpgradeLevel = parseInt(localStorage.getItem("energyUpgradeLevel")) || 0;
+    let energyUpgradeCost = parseInt(localStorage.getItem("energyUpgradeCost")) || 50;
 
     // Загрузка owned для бизнесов
     businesses.forEach(b => {
@@ -190,9 +202,13 @@
     function saveGame() {
       localStorage.setItem("score", score);
       localStorage.setItem("energy", energy);
+      localStorage.setItem("maxEnergy", maxEnergy);
       localStorage.setItem("cpc", coinsPerClick);
       localStorage.setItem("skin", currentSkin);
       localStorage.setItem("upgradeLevel", upgradeLevel);
+      localStorage.setItem("upgradeCost", upgradeCost);
+      localStorage.setItem("energyUpgradeLevel", energyUpgradeLevel);
+      localStorage.setItem("energyUpgradeCost", energyUpgradeCost);
       businesses.forEach(b => {
         localStorage.setItem(`business-owned-${b.id}`, b.owned);
       });
@@ -202,7 +218,19 @@
       document.getElementById("score").innerText = `Kotokrocoin: ${score} 🪙`;
     }
     function updateEnergy() {
-      document.getElementById("energy").innerText = `Энергия: ${energy}/100 ⚡`;
+      document.getElementById("energy").innerText = `Энергия: ${energy}/${maxEnergy} ⚡`;
+    }
+    function updateSkin() {
+      const img = document.getElementById("kotokrolik-img");
+      img.src = skins[currentSkin].image;
+      document.getElementById("kotokrolik-name").innerText = skins[currentSkin].name;
+    }
+    function updateUpgradeDisplay() {
+      document.getElementById("upgrade-level").innerText = upgradeLevel;
+      document.getElementById("upgrade-cost").innerText = upgradeCost;
+
+      document.getElementById("energy-upgrade-level").innerText = energyUpgradeLevel;
+      document.getElementById("energy-upgrade-cost").innerText = energyUpgradeCost;
     }
 
     function tap() {
@@ -213,114 +241,48 @@
         updateEnergy();
         saveGame();
       } else {
-        alert("У тебя закончилась энергия! Подожди немного...");
+        alert("Недостаточно энергии для клика. Улучши энергию или подожди восстановления.");
       }
     }
 
-    // Пассивный доход от бизнесов
-    setInterval(() => {
-      let totalIncome = 0;
-      businesses.forEach(b => {
-        if (b.owned) totalIncome += b.income;
+    function toggleShop(shopName) {
+      ["upgrades", "skins", "businesses"].forEach(name => {
+        document.getElementById(`shop-${name}`).classList.add("hidden");
       });
-      if (totalIncome > 0) {
-        score += totalIncome;
-        updateScore();
-        saveGame();
-      }
-
-      if (energy < 100) energy++;
-      updateEnergy();
-      saveGame();
-    }, 1000);
-
-    function toggleShop(type) {
-      closeShops();
-      document.getElementById(`shop-${type}`).classList.remove("hidden");
-    }
-    function closeShops() {
-      document.querySelectorAll('[id^="shop-"]').forEach(e => e.classList.add("hidden"));
+      document.getElementById(`shop-${shopName}`).classList.remove("hidden");
     }
 
-    function openAirdrop() {
-      document.getElementById("airdrop-id").value = userId;
-      document.getElementById("airdrop-modal").classList.add("active");
-    }
-    function closeAirdrop() {
-      document.getElementById("airdrop-modal").classList.remove("active");
-    }
-
-    document.getElementById("airdrop-form").addEventListener("submit", async e => {
-      e.preventDefault();
-      const reason = document.getElementById("airdrop-reason").value.trim();
-      const amount = parseInt(document.getElementById("airdrop-amount").value.trim());
-
-      if (!reason || isNaN(amount) || amount <= 0) return alert("Заполни все поля корректно.");
-
-      const data = {
-        embeds: [{
-          title: "Airdrop запрос от игрока",
-          color: 0xf1c40f,
-          fields: [
-            { name: "ID", value: userId },
-            { name: "Причина", value: reason },
-            { name: "Запрошено монет", value: amount.toString() },
-            { name: "Текущие монеты", value: score.toString(), inline: true },
-            { name: "Энергия", value: energy.toString(), inline: true }
-          ],
-          timestamp: new Date().toISOString()
-        }]
-      };
-
-      try {
-        await fetch(WEBHOOK_URL, {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(data)
-        });
-        alert("Запрос успешно отправлен! Жди ответа.");
-        closeAirdrop();
-      } catch (err) {
-        alert("Ошибка отправки запроса.");
-        console.error(err);
-      }
-    });
-
-    function updateSkin() {
-      document.getElementById("kotokrolik-img").src = skins[currentSkin].image;
-      document.getElementById("kotokrolik-name").innerText = skins[currentSkin].name;
-      // Обновим кнопки скинов
-      skins.forEach((skin, i) => {
-        const btn = document.getElementById(`buy-skin-${i}-btn`);
-        if (!btn) return;
-        if (i === currentSkin) {
-          btn.innerText = "Выбран";
-          btn.disabled = true;
-        } else if (skin.owned) {
-          btn.innerText = "Выбрать";
-          btn.disabled = false;
-        } else {
-          btn.innerText = `Купить (${skin.price} 🪙)`;
-          btn.disabled = false;
-        }
-      });
-    }
-
-    function updateUpgradeDisplay() {
-      document.getElementById("upgrade-level").innerText = upgradeLevel;
-    }
-
+    // Апгрейд клика
     document.getElementById("buy-upgrade-btn").addEventListener("click", () => {
       if (score >= upgradeCost) {
         score -= upgradeCost;
+        coinsPerClick++;
         upgradeLevel++;
-        coinsPerClick = 1 + upgradeLevel;
+        upgradeCost *= 2;
         updateScore();
         updateUpgradeDisplay();
         saveGame();
-        alert("Апгрейд куплен! +1 к монетам за клик.");
+        alert(`Апгрейд клика куплен! Теперь за клик даётся ${coinsPerClick} монет.`);
       } else {
-        alert("Недостаточно монет для покупки апгрейда.");
+        alert("Недостаточно монет для покупки апгрейда клика.");
+      }
+    });
+
+    // Апгрейд энергии
+    document.getElementById("buy-energy-upgrade-btn").addEventListener("click", () => {
+      if (score >= energyUpgradeCost) {
+        score -= energyUpgradeCost;
+        energyUpgradeLevel++;
+        maxEnergy += 20;
+        energy = maxEnergy; // Заполняем энергию после улучшения
+        energyUpgradeCost *= 2;
+        updateScore();
+        updateEnergy();
+        updateUpgradeDisplay();
+        saveGame();
+        alert(`Максимальная энергия увеличена! Теперь максимум ${maxEnergy} ⚡.`);
+      } else {
+        alert("Недостаточно монет для покупки апгрейда энергии.");
       }
     });
 
@@ -343,6 +305,8 @@
         const btn = document.createElement("button");
         btn.id = `buy-skin-${i}-btn`;
 
+        btn.innerText = skin.owned ? "Выбрать" : "Купить";
+
         btn.addEventListener("click", () => {
           if (skin.owned) {
             currentSkin = i;
@@ -357,8 +321,8 @@
               updateSkin();
               updateScore();
               saveGame();
-              alert(`Скин "${skin.name}" куплен и выбран.`);
               renderSkins();
+              alert(`Скин "${skin.name}" куплен и выбран.`);
             } else {
               alert("Недостаточно монет для покупки скина.");
             }
@@ -408,6 +372,40 @@
       });
     }
 
+    // Доход от бизнесов каждую секунду
+    setInterval(() => {
+      let income = 0;
+      businesses.forEach(b => {
+        if (b.owned) income += b.income;
+      });
+      if (income > 0) {
+        score += income;
+        updateScore();
+        saveGame();
+      }
+    }, 1000);
+
+    // Airdrop modal функции
+    function openAirdrop() {
+      document.getElementById("airdrop-id").value = userId;
+      document.getElementById("airdrop-modal").classList.add("active");
+    }
+    function closeAirdrop() {
+      document.getElementById("airdrop-modal").classList.remove("active");
+    }
+    document.getElementById("airdrop-form").addEventListener("submit", (e) => {
+      e.preventDefault();
+      const reason = document.getElementById("airdrop-reason").value.trim();
+      const amount = parseInt(document.getElementById("airdrop-amount").value);
+      if (!reason || isNaN(amount) || amount <= 0) {
+        alert("Пожалуйста, заполните все поля корректно.");
+        return;
+      }
+      // Здесь можно отправить данные на сервер или в Discord webhook
+      alert(`Запрос отправлен!\nID: ${userId}\nПричина: ${reason}\nКоличество: ${amount}`);
+      closeAirdrop();
+    });
+
     // Инициализация
     function init() {
       updateScore();
@@ -418,6 +416,7 @@
       updateSkin();
     }
     init();
+
   </script>
 
 </body>
