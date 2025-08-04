@@ -194,7 +194,8 @@
     const businesses = [
       { id: 0, name: "Кофейня ☕", price: 100, income: 1, owned: false },
       { id: 1, name: "Пекарня 🍞", price: 500, income: 5, owned: false },
-      { id: 2, name: "Магазин электроники 📱", price: 2000, income: 20, owned: false }
+      { id: 2, name: "Магазин электроники 📱", price: 2000, income: 20, owned: false },
+      { id: 3, name: "Бургер Кинг 🍔", price: 5000, income: 100, owned: false }
     ];
 
     // Состояние игры
@@ -396,6 +397,7 @@
             updateScore();
             saveGame();
             renderBusinesses();
+            alert(`Поздравляем! Вы купили бизнес "${bus.name}"!`);
           } else {
             alert("Недостаточно монет!");
           }
