@@ -2,177 +2,320 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>KotoKombat</title>
-  <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KotoKombat - Заводь котокроликов!</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
-    .kotokrolik {
-      transition: transform 0.1s;
+    @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
+    
+    :root {
+      --primary: #8b5cf6;
+      --secondary: #ec4899;
+      --accent: #f59e0b;
+      --dark: #1f2937;
+      --light: #fdf2f8;
     }
-    .kotokrolik:active {
-      transform: scale(0.9);
+    
+    body {
+      font-family: 'Comic Neue', cursive;
+      background: linear-gradient(135deg, #fdf4ff 0%, #fce7f3 100%);
+      min-height: 100vh;
+      color: var(--dark);
     }
-    #user-id {
-      position: fixed;
-      top: 10px;
-      left: 10px;
-      background: rgba(255 255 255 / 0.8);
-      padding: 6px 10px;
-      border-radius: 8px;
-      font-weight: bold;
-      color: #5b21b6;
-      box-shadow: 0 0 6px rgba(91,33,182,0.6);
-      z-index: 1000;
-      user-select: text;
+    
+    .game-container {
+      max-width: 1200px;
+      margin: 0 auto;
     }
-    #airdrop-modal {
-      display: none;
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.6);
-      backdrop-filter: blur(3px);
-      z-index: 2000;
-      justify-content: center;
-      align-items: center;
+    
+    .header-gradient {
+      background: linear-gradient(90deg, var(--primary) 0%, var(--secondary) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
     }
-    #airdrop-modal.active {
-      display: flex;
-    }
-    #shop-upgrades, #shop-skins, #shop-businesses {
-      background: white;
-      border-radius: 1rem;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.1);
-      max-width: 350px;
-      width: 100%;
-      padding: 1rem;
-      margin-top: 1rem;
-      text-align: left;
-      max-height: 400px;
-      overflow-y: auto;
-    }
-    #shop-upgrades.hidden, #shop-skins.hidden, #shop-businesses.hidden {
-      display: none;
-    }
-    .shop-item {
-      border-bottom: 1px solid #ddd;
-      padding: 0.5rem 0;
-      display: flex;
-      justify-content: space-between;
-      align-items: center;
-      gap: 12px;
-    }
-    .shop-item:last-child {
-      border-bottom: none;
-    }
-    .shop-item button {
-      background: #6366f1;
-      color: white;
-      padding: 0.3rem 0.7rem;
-      border-radius: 0.5rem;
-      font-size: 0.9rem;
+    
+    .character-container {
+      position: relative;
+      transition: all 0.2s ease;
       cursor: pointer;
-      transition: background 0.3s;
     }
-    .shop-item button:hover:enabled {
-      background: #4f46e5;
-    }
-    .skin-preview {
-      width: 64px;
-      height: 64px;
-      border-radius: 0.75rem;
+    
+    .character-img {
+      width: 220px;
+      height: 220px;
       object-fit: cover;
-      border: 2px solid #ddd;
+      border: 4px solid #ddd6fe;
+      box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.4), 0 5px 10px -5px rgba(236, 72, 153, 0.2);
     }
-    .loader {
-      border: 3px solid #f3f3f3;
-      border-top: 3px solid #3498db;
-      border-radius: 50%;
-      width: 20px;
-      height: 20px;
-      animation: spin 1s linear infinite;
-      display: none;
-      margin-left: 10px;
+    
+    .character-container:active {
+      transform: scale(0.95);
     }
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
+    
+    .floating-coin {
+      position: absolute;
+      color: #f59e0b;
+      font-size: 1.5rem;
+      pointer-events: none;
+      animation: floatUp 1s ease-in-out forwards;
+      z-index: 20;
+    }
+    
+    @keyframes floatUp {
+      0% {
+        opacity: 1;
+        transform: translateY(0) scale(1);
+      }
+      100% {
+        opacity: 0;
+        transform: translateY(-80px) scale(1.5);
+      }
+    }
+    
+    .pulse {
+      animation: pulse 1.5s infinite;
+    }
+    
+    @keyframes pulse {
+      0% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+      100% { transform: scale(1); }
+    }
+    
+    .progress-bar {
+      height: 1rem;
+      border-radius: 9999px;
+      background: #e5e7eb;
+      overflow: hidden;
+    }
+    
+    .progress-fill {
+      height: 100%;
+      border-radius: 9999px;
+      background: linear-gradient(90deg, #3b82f6 0%, #8b5cf6 100%);
+      transition: width 0.3s ease;
+    }
+    
+    .shop-item {
+      transition: all 0.2s ease;
+      border-left: 4px solid transparent;
+    }
+    
+    .shop-item:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      border-left-color: var(--primary);
+    }
+    
+    .badge {
+      display: inline-block;
+      padding: 0.25rem 0.5rem;
+      border-radius: 9999px;
+      font-size: 0.75rem;
+      font-weight: bold;
+    }
+    
+    .tab-button {
+      transition: all 0.2s ease;
+      border-bottom: 3px solid transparent;
+    }
+    
+    .tab-button.active {
+      border-bottom-color: var(--primary);
+      color: var(--primary);
+    }
+    
+    .notification {
+      position: fixed;
+      top: 1rem;
+      right: 1rem;
+      padding: 1rem;
+      border-radius: 0.5rem;
+      background: white;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+      transform: translateX(100%);
+      transition: transform 0.3s ease;
+      z-index: 1000;
+      max-width: 300px;
+    }
+    
+    .notification.show {
+      transform: translateX(0);
+    }
+    
+    .energy-low {
+      animation: shake 0.5s ease-in-out;
+    }
+    
+    @keyframes shake {
+      0%, 100% { transform: translateX(0); }
+      25% { transform: translateX(-5px); }
+      75% { transform: translateX(5px); }
+    }
+    
+    /* Адаптивность */
+    @media (max-width: 768px) {
+      .character-img {
+        width: 180px;
+        height: 180px;
+      }
+      
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
     }
   </style>
 </head>
-<body class="bg-gradient-to-br from-pink-100 to-purple-200 min-h-screen flex flex-col items-center justify-center p-6 gap-6">
+<body class="min-h-screen p-4">
+  <div class="game-container">
+    <!-- Шапка -->
+    <header class="flex justify-between items-center mb-6 p-4 bg-white rounded-xl shadow-lg">
+      <div>
+        <h1 class="text-3xl font-bold header-gradient">KotoKombat <i class="fas fa-paw"></i></h1>
+        <p class="text-sm text-gray-600">Заводь милых котокроликов и зарабатывай монеты!</p>
+      </div>
+      <div id="user-id" class="bg-purple-100 px-4 py-2 rounded-lg font-mono text-purple-800">
+        ID: <span id="uid" class="font-bold"></span>
+      </div>
+    </header>
 
-  <div id="user-id">ID: <span id="uid"></span></div>
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <!-- Левая колонка - Основная игра -->
+      <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
+        <div class="flex flex-col items-center justify-center">
+          <div class="character-container relative mb-6" id="character-container">
+            <img id="kotokrolik-img" src="https://placekitten.com/200/200" class="character-img rounded-full pulse">
+            <div id="floating-coins"></div>
+          </div>
+          
+          <div class="text-center mb-6">
+            <p id="kotokrolik-name" class="text-xl font-bold text-purple-700 mb-2">Котокролик 🐰😼</p>
+            <p id="score" class="text-3xl font-bold text-amber-500 mb-2">0 🪙</p>
+            <div class="w-full max-w-xs mx-auto mb-2">
+              <p class="text-sm font-medium text-blue-600 mb-1">Энергия ⚡</p>
+              <div class="progress-bar">
+                <div id="energy-bar" class="progress-fill" style="width: 100%;"></div>
+              </div>
+              <p id="energy-text" class="text-sm text-right mt-1 text-gray-600">100/100</p>
+            </div>
+          </div>
 
-  <div class="bg-white shadow-2xl rounded-2xl p-4 w-full max-w-sm text-center">
-    <img id="kotokrolik-img" src="images/kotokrolik.jpg" class="kotokrolik w-48 h-48 mx-auto rounded-full border-4 border-purple-300 shadow-lg cursor-pointer" onclick="tap()">
-    <p id="kotokrolik-name" class="text-lg font-medium text-purple-800 mt-4">Котокролик 🐰😼</p>
-    <p id="score" class="text-2xl font-bold text-pink-600">Kotokrocoin: 0 🪙</p>
-    <p id="energy" class="text-md font-medium text-blue-600">Энергия: 100/100 ⚡</p>
-
-    <div class="flex flex-col gap-2 mt-4">
-      <button onclick="toggleShop('upgrades')" class="bg-green-500 hover:bg-green-600 text-white rounded-xl px-4 py-2 shadow">Апгрейды 🛠️</button>
-      <button onclick="toggleShop('skins')" class="bg-purple-500 hover:bg-purple-600 text-white rounded-xl px-4 py-2 shadow">Магазин скинов 🎨</button>
-      <button onclick="toggleShop('businesses')" class="bg-indigo-500 hover:bg-indigo-600 text-white rounded-xl px-4 py-2 shadow">Бизнесы 🏭</button>
-      <button onclick="openAirdrop()" class="bg-yellow-400 hover:bg-yellow-500 text-white rounded-xl px-4 py-2 shadow">Airdrop 📦</button>
-    </div>
-
-    <!-- Магазин апгрейдов -->
-    <div id="shop-upgrades" class="hidden mt-6">
-      <h3 class="text-xl font-semibold mb-4 text-green-700">Апгрейды</h3>
-
-      <div class="shop-item">
-        <div>
-          <strong>Улучшение клика</strong><br />
-          <small>+1 к монетам за клик</small><br />
-          <small>Уровень: <span id="upgrade-level">0</span></small><br />
-          <small>Цена: <span id="upgrade-cost"></span> 🪙</small>
+          <div class="grid grid-cols-2 gap-4 w-full max-w-md">
+            <button onclick="tap()" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105">
+              <i class="fas fa-hand-point-up mr-2"></i>Кликнуть
+            </button>
+            <button onclick="openAirdrop()" class="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105">
+              <i class="fas fa-gift mr-2"></i>Airdrop
+            </button>
+          </div>
         </div>
-        <button id="buy-upgrade-btn">Купить</button>
       </div>
 
-      <div class="shop-item">
-        <div>
-          <strong>Улучшение энергии</strong><br />
-          <small>+20 к максимальной энергии</small><br />
-          <small>Уровень: <span id="energy-upgrade-level">0</span></small><br />
-          <small>Цена: <span id="energy-upgrade-cost"></span> 🪙</small>
+      <!-- Правая колонка - Магазин и бизнесы -->
+      <div class="bg-white rounded-2xl shadow-lg p-6">
+        <h2 class="text-xl font-bold text-purple-800 mb-4 flex items-center">
+          <i class="fas fa-store mr-2"></i> Магазин
+        </h2>
+        
+        <div class="flex border-b border-gray-200 mb-4">
+          <button id="tab-upgrades" class="tab-button active flex-1 py-2 text-center font-medium" onclick="switchTab('upgrades')">
+            <i class="fas fa-tools mr-1"></i> Улучшения
+          </button>
+          <button id="tab-skins" class="tab-button flex-1 py-2 text-center font-medium" onclick="switchTab('skins')">
+            <i class="fas fa-palette mr-1"></i> Скины
+          </button>
+          <button id="tab-businesses" class="tab-button flex-1 py-2 text-center font-medium" onclick="switchTab('businesses')">
+            <i class="fas fa-industry mr-1"></i> Бизнесы
+          </button>
         </div>
-        <button id="buy-energy-upgrade-btn">Купить</button>
+        
+        <div id="shop-upgrades" class="shop-tab">
+          <div class="shop-item bg-gray-50 p-4 rounded-lg mb-3">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-gray-800">Улучшение клика</h3>
+                <p class="text-sm text-gray-600">+1 к монетам за клик</p>
+                <div class="flex items-center mt-1">
+                  <span class="badge bg-purple-100 text-purple-800">Ур. <span id="upgrade-level">0</span></span>
+                  <span class="text-amber-600 font-bold ml-2"><i class="fas fa-coins mr-1"></i> <span id="upgrade-cost">50</span></span>
+                </div>
+              </div>
+              <button id="buy-upgrade-btn" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                Купить
+              </button>
+            </div>
+          </div>
+          
+          <div class="shop-item bg-gray-50 p-4 rounded-lg">
+            <div class="flex justify-between items-center">
+              <div>
+                <h3 class="font-bold text-gray-800">Улучшение энергии</h3>
+                <p class="text-sm text-gray-600">+20 к максимальной энергии</p>
+                <div class="flex items-center mt-1">
+                  <span class="badge bg-blue-100 text-blue-800">Ур. <span id="energy-upgrade-level">0</span></span>
+                  <span class="text-amber-600 font-bold ml-2"><i class="fas fa-coins mr-1"></i> <span id="energy-upgrade-cost">50</span></span>
+                </div>
+              </div>
+              <button id="buy-energy-upgrade-btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                Купить
+              </button>
+            </div>
+          </div>
+        </div>
+        
+        <div id="shop-skins" class="shop-tab hidden">
+          <div id="skins-list" class="space-y-3"></div>
+        </div>
+        
+        <div id="shop-businesses" class="shop-tab hidden">
+          <p class="text-sm text-gray-600 mb-3">Доход начисляется автоматически каждую секунду</p>
+          <div id="businesses-list" class="space-y-3"></div>
+        </div>
       </div>
     </div>
 
-    <!-- Магазин скинов -->
-    <div id="shop-skins" class="hidden mt-6">
-      <h3 class="text-xl font-semibold mb-4 text-purple-700">Магазин скинов</h3>
-      <div id="skins-list"></div>
-    </div>
-
-    <!-- Магазин бизнесов -->
-    <div id="shop-businesses" class="hidden mt-6">
-      <h3 class="text-xl font-semibold mb-4 text-indigo-700">Бизнесы</h3>
-      <div id="businesses-list"></div>
-      <p class="mt-4 text-sm text-gray-600">Доход считается каждую секунду.</p>
+    <!-- Уведомление -->
+    <div id="notification" class="notification">
+      <div class="flex items-start">
+        <div id="notification-icon" class="mr-3 text-xl"></div>
+        <div>
+          <h3 id="notification-title" class="font-bold"></h3>
+          <p id="notification-message" class="text-sm"></p>
+        </div>
+      </div>
     </div>
   </div>
 
-  <!-- Airdrop Modal -->
-  <div id="airdrop-modal" class="items-center">
-    <div class="bg-white p-6 rounded-xl shadow-xl max-w-sm w-full relative">
-      <button onclick="closeAirdrop()" class="absolute top-2 right-2 text-red-500 font-bold">✕</button>
-      <h2 class="text-lg font-bold text-yellow-500 mb-4">Запрос на Airdrop</h2>
-      <form id="airdrop-form">
-        <label class="block mb-2 text-sm font-medium">ID аккаунта</label>
-        <input type="text" id="airdrop-id" class="w-full mb-4 p-2 border rounded" readonly />
-
-        <label class="block mb-2 text-sm font-medium">Почему ты хочешь получить airdrop?</label>
-        <textarea id="airdrop-reason" class="w-full mb-4 p-2 border rounded" rows="2" required></textarea>
-
-        <label class="block mb-2 text-sm font-medium">Сколько монет ты хочешь?</label>
-        <input type="number" id="airdrop-amount" class="w-full mb-4 p-2 border rounded" min="1" required />
-
-        <button type="submit" class="bg-yellow-500 hover:bg-yellow-600 text-white px-4 py-2 rounded w-full flex justify-center items-center">
-          <span id="submit-text">Отправить 🚀</span>
-          <div id="loader" class="loader"></div>
+  <!-- Модальное окно Airdrop -->
+  <div id="airdrop-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div class="bg-amber-400 p-4 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-white"><i class="fas fa-gift mr-2"></i> Запрос на Airdrop</h2>
+        <button onclick="closeAirdrop()" class="text-white hover:text-amber-100 text-xl">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <form id="airdrop-form" class="p-6">
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">ID аккаунта</label>
+          <input type="text" id="airdrop-id" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100" readonly />
+        </div>
+        
+        <div class="mb-4">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Почему ты хочешь получить airdrop?</label>
+          <textarea id="airdrop-reason" class="w-full p-3 border border-gray-300 rounded-lg" rows="3" required></textarea>
+        </div>
+        
+        <div class="mb-6">
+          <label class="block text-sm font-medium text-gray-700 mb-1">Сколько монет ты хочешь?</label>
+          <input type="number" id="airdrop-amount" class="w-full p-3 border border-gray-300 rounded-lg" min="1" required />
+        </div>
+        
+        <button type="submit" class="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+          <span id="submit-text">Отправить запрос</span>
+          <div id="loader" class="loader ml-2 hidden"></div>
         </button>
       </form>
     </div>
@@ -187,15 +330,29 @@
 
     // Данные игры
     const skins = [
-      { id: 0, name: "Котокролик 🐰😼", image: "images/kotokrolik.jpg", owned: true, price: 0 },
-      { id: 1, name: "Котокролитка 🎀", image: "images/kotokrolitka.jpg", owned: false, price: 50 }
-    ];
+  { 
+    id: 0, 
+    name: "Котокролик 🐰😼", 
+    image: "images/kotokrolik.jpg", // или .jpg/.webp в зависимости от формата
+    owned: true, 
+    price: 0 
+  },
+  { 
+    id: 1, 
+    name: "Котокролитка 🎀", 
+    image: "images/kotokrolitka.jpg", // или .jpg/.webp
+    owned: false, 
+    price: 50 
+  }
+];
 
     const businesses = [
-      { id: 0, name: "Кофейня ☕", price: 100, income: 1, owned: false },
-      { id: 1, name: "Пекарня 🍞", price: 500, income: 5, owned: false },
-      { id: 2, name: "Магазин электроники 📱", price: 2000, income: 20, owned: false },
-      { id: 3, name: "Бургер Кинг 🍔", price: 5000, income: 100, owned: false }
+      { id: 0, name: "Кофейня ☕", price: 100, income: 1, owned: false, icon: "fa-mug-hot" },
+      { id: 1, name: "Пекарня 🍞", price: 500, income: 5, owned: false, icon: "fa-bread-slice" },
+      { id: 2, name: "Магазин электроники 📱", price: 2000, income: 20, owned: false, icon: "fa-mobile" },
+      { id: 3, name: "Бургер Кинг 🍔", price: 5000, income: 100, owned: false, icon: "fa-hamburger" },
+      { id: 4, name: "Кинотеатр 🎬", price: 15000, income: 300, owned: false, icon: "fa-film" },
+      { id: 5, name: "Торговый центр 🛍️", price: 50000, income: 1000, owned: false, icon: "fa-shopping-cart" }
     ];
 
     // Состояние игры
@@ -209,11 +366,94 @@
     let energyUpgradeLevel = parseInt(localStorage.getItem("energyUpgradeLevel")) || 0;
     let energyUpgradeCost = parseInt(localStorage.getItem("energyUpgradeCost")) || 50;
 
-    // Инициализация бизнесов
-    businesses.forEach(b => {
-      const ownedStored = localStorage.getItem(`business-owned-${b.id}`);
-      if (ownedStored !== null) b.owned = ownedStored === "true";
-    });
+    // Инициализация скинов и бизнесов
+    function initSkinsFromStorage() {
+      const savedSkins = localStorage.getItem("skins");
+      if (savedSkins) {
+        const parsedSkins = JSON.parse(savedSkins);
+        skins.forEach(skin => {
+          const savedSkin = parsedSkins.find(s => s.id === skin.id);
+          if (savedSkin) {
+            skin.owned = savedSkin.owned;
+          }
+        });
+      }
+    }
+
+    function initBusinessesFromStorage() {
+      businesses.forEach(b => {
+        const ownedStored = localStorage.getItem(`business-owned-${b.id}`);
+        if (ownedStored !== null) b.owned = ownedStored === "true";
+      });
+    }
+
+    // ========================
+    // Вспомогательные функции
+    // ========================
+
+    function showNotification(title, message, type = "info") {
+      const notification = document.getElementById("notification");
+      const iconElem = document.getElementById("notification-icon");
+      const titleElem = document.getElementById("notification-title");
+      const messageElem = document.getElementById("notification-message");
+      
+      // Устанавливаем иконку в зависимости от типа уведомления
+      switch(type) {
+        case "success":
+          iconElem.className = "fas fa-check-circle text-green-500";
+          break;
+        case "error":
+          iconElem.className = "fas fa-exclamation-circle text-red-500";
+          break;
+        case "warning":
+          iconElem.className = "fas fa-exclamation-triangle text-yellow-500";
+          break;
+        default:
+          iconElem.className = "fas fa-info-circle text-blue-500";
+      }
+      
+      titleElem.textContent = title;
+      messageElem.textContent = message;
+      
+      notification.classList.add("show");
+      
+      // Автоматически скрываем уведомление через 3 секунды
+      setTimeout(() => {
+        notification.classList.remove("show");
+      }, 3000);
+    }
+
+    function createFloatingCoin(x, y) {
+      const floatingCoins = document.getElementById("floating-coins");
+      const coin = document.createElement("div");
+      coin.className = "floating-coin";
+      coin.innerHTML = `<i class="fas fa-coin"></i> +${coinsPerClick}`;
+      coin.style.left = `${x}px`;
+      coin.style.top = `${y}px`;
+      
+      floatingCoins.appendChild(coin);
+      
+      // Удаляем элемент после завершения анимации
+      setTimeout(() => {
+        coin.remove();
+      }, 1000);
+    }
+
+    function switchTab(tabName) {
+      // Убираем активный класс со всех кнопок
+      document.querySelectorAll('.tab-button').forEach(btn => {
+        btn.classList.remove('active');
+      });
+      
+      // Скрываем все вкладки
+      document.querySelectorAll('.shop-tab').forEach(tab => {
+        tab.classList.add('hidden');
+      });
+      
+      // Активируем выбранную кнопку и показываем выбранную вкладку
+      document.getElementById(`tab-${tabName}`).classList.add('active');
+      document.getElementById(`shop-${tabName}`).classList.remove('hidden');
+    }
 
     // ========================
     // Основные функции игры
@@ -229,17 +469,31 @@
       localStorage.setItem("upgradeCost", upgradeCost);
       localStorage.setItem("energyUpgradeLevel", energyUpgradeLevel);
       localStorage.setItem("energyUpgradeCost", energyUpgradeCost);
+      
+      // Сохраняем информацию о скинах
+      localStorage.setItem("skins", JSON.stringify(skins));
+      
+      // Сохраняем информацию о бизнесах
       businesses.forEach(b => {
         localStorage.setItem(`business-owned-${b.id}`, b.owned);
       });
     }
 
     function updateScore() {
-      document.getElementById("score").innerText = `Kotokrocoin: ${score} 🪙`;
+      document.getElementById("score").innerText = `${score} 🪙`;
     }
 
     function updateEnergy() {
-      document.getElementById("energy").innerText = `Энергия: ${energy}/${maxEnergy} ⚡`;
+      const percent = (energy / maxEnergy) * 100;
+      document.getElementById("energy-bar").style.width = `${percent}%`;
+      document.getElementById("energy-text").innerText = `${energy}/${maxEnergy}`;
+      
+      // Анимация тряски при низкой энергии
+      if (energy < 20) {
+        document.getElementById("energy-bar").classList.add('energy-low');
+      } else {
+        document.getElementById("energy-bar").classList.remove('energy-low');
+      }
     }
 
     function updateSkin() {
@@ -255,15 +509,24 @@
       document.getElementById("energy-upgrade-cost").innerText = energyUpgradeCost;
     }
 
-    function tap() {
+    function tap(event) {
       if (energy > 0) {
         score += coinsPerClick;
         energy--;
+        
+        // Создаем летающую монетку
+        if (event) {
+          const rect = document.getElementById("character-container").getBoundingClientRect();
+          const x = event.clientX - rect.left;
+          const y = event.clientY - rect.top;
+          createFloatingCoin(x, y);
+        }
+        
         updateScore();
         updateEnergy();
         saveGame();
       } else {
-        alert("Недостаточно энергии! Подожди немного.");
+        showNotification("Недостаточно энергии!", "Подожди, пока энергия восстановится", "warning");
       }
     }
 
@@ -290,13 +553,6 @@
     // Магазины
     // ========================
 
-    function toggleShop(shopName) {
-      ["upgrades", "skins", "businesses"].forEach(name => {
-        document.getElementById(`shop-${name}`).classList.add("hidden");
-      });
-      document.getElementById(`shop-${shopName}`).classList.remove("hidden");
-    }
-
     // Апгрейды
     document.getElementById("buy-upgrade-btn").addEventListener("click", () => {
       if (score >= upgradeCost) {
@@ -307,9 +563,9 @@
         updateScore();
         updateUpgradeDisplay();
         saveGame();
-        alert(`Улучшение куплено! Теперь за клик: ${coinsPerClick} монет`);
+        showNotification("Улучшение куплено!", `Теперь за клик: ${coinsPerClick} монет`, "success");
       } else {
-        alert("Недостаточно монет!");
+        showNotification("Недостаточно монет!", "Заработай больше монет, чтобы купить улучшение", "error");
       }
     });
 
@@ -324,9 +580,9 @@
         updateEnergy();
         updateUpgradeDisplay();
         saveGame();
-        alert(`Макс. энергия увеличена до ${maxEnergy}!`);
+        showNotification("Энергия улучшена!", `Макс. энергия увеличена до ${maxEnergy}`, "success");
       } else {
-        alert("Недостаточно монет!");
+        showNotification("Недостаточно монет!", "Заработай больше монет, чтобы купить улучшение", "error");
       }
     });
 
@@ -334,44 +590,62 @@
     function renderSkins() {
       const skinsList = document.getElementById("skins-list");
       skinsList.innerHTML = "";
+      
       skins.forEach((skin, i) => {
-        const div = document.createElement("div");
-        div.className = "shop-item";
-
-        const preview = document.createElement("img");
-        preview.src = skin.image;
-        preview.className = "skin-preview";
-
-        const info = document.createElement("div");
-        info.innerHTML = `<strong>${skin.name}</strong><br>${skin.owned ? "✓ Куплено" : `Цена: ${skin.price} 🪙`}`;
-
-        const btn = document.createElement("button");
-        btn.textContent = skin.owned ? (currentSkin === i ? "Выбрано" : "Выбрать") : "Купить";
-        btn.disabled = skin.owned && currentSkin === i;
-
-        btn.addEventListener("click", () => {
-          if (skin.owned) {
-            currentSkin = i;
-            updateSkin();
-            saveGame();
-            renderSkins();
-          } else if (score >= skin.price) {
-            score -= skin.price;
-            skin.owned = true;
-            currentSkin = i;
-            updateScore();
-            updateSkin();
-            saveGame();
-            renderSkins();
-          } else {
-            alert("Недостаточно монет!");
-          }
-        });
-
-        div.appendChild(preview);
-        div.appendChild(info);
-        div.appendChild(btn);
-        skinsList.appendChild(div);
+        const skinElem = document.createElement("div");
+        skinElem.className = `shop-item bg-gray-50 p-4 rounded-lg ${skin.owned ? 'border-l-4 border-purple-500' : ''}`;
+        
+        skinElem.innerHTML = `
+          <div class="flex items-center">
+            <img src="${skin.image}" class="w-16 h-16 rounded-lg object-cover mr-4 border-2 ${currentSkin === i ? 'border-purple-500' : 'border-gray-300'}">
+            <div class="flex-1">
+              <h3 class="font-bold text-gray-800">${skin.name}</h3>
+              <div class="flex items-center mt-1">
+                ${skin.owned ? 
+                  `<span class="badge bg-green-100 text-green-800">Куплено</span>` : 
+                  `<span class="text-amber-600 font-bold"><i class="fas fa-coins mr-1"></i>${skin.price}</span>`
+                }
+              </div>
+            </div>
+            <button class="${skin.owned ? 
+              (currentSkin === i ? 
+                'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default' : 
+                'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg') : 
+              (score >= skin.price ? 
+                'bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg' : 
+                'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default')
+            }">
+              ${skin.owned ? 
+                (currentSkin === i ? 'Выбрано' : 'Выбрать') : 
+                (score >= skin.price ? 'Купить' : 'Недостаточно')
+              }
+            </button>
+          </div>
+        `;
+        
+        const button = skinElem.querySelector("button");
+        if (!skin.owned || currentSkin !== i) {
+          button.addEventListener("click", () => {
+            if (skin.owned) {
+              currentSkin = i;
+              updateSkin();
+              saveGame();
+              renderSkins();
+              showNotification("Скин изменен!", `Теперь ты ${skin.name}`, "success");
+            } else if (score >= skin.price) {
+              score -= skin.price;
+              skin.owned = true;
+              currentSkin = i;
+              updateScore();
+              updateSkin();
+              saveGame();
+              renderSkins();
+              showNotification("Скин куплен!", `Теперь ты ${skin.name}`, "success");
+            }
+          });
+        }
+        
+        skinsList.appendChild(skinElem);
       });
     }
 
@@ -379,33 +653,52 @@
     function renderBusinesses() {
       const busList = document.getElementById("businesses-list");
       busList.innerHTML = "";
+      
       businesses.forEach(bus => {
-        const div = document.createElement("div");
-        div.className = "shop-item";
-
-        const info = document.createElement("div");
-        info.innerHTML = `<strong>${bus.name}</strong><br>Цена: ${bus.price} 🪙<br>Доход: ${bus.income} 🪙/сек`;
-
-        const btn = document.createElement("button");
-        btn.textContent = bus.owned ? "✓ Куплено" : "Купить";
-        btn.disabled = bus.owned;
-
-        btn.addEventListener("click", () => {
-          if (score >= bus.price) {
-            score -= bus.price;
-            bus.owned = true;
-            updateScore();
-            saveGame();
-            renderBusinesses();
-            alert(`Поздравляем! Вы купили бизнес "${bus.name}"!`);
-          } else {
-            alert("Недостаточно монет!");
-          }
-        });
-
-        div.appendChild(info);
-        div.appendChild(btn);
-        busList.appendChild(div);
+        const busElem = document.createElement("div");
+        busElem.className = `shop-item bg-gray-50 p-4 rounded-lg ${bus.owned ? 'border-l-4 border-green-500' : ''}`;
+        
+        busElem.innerHTML = `
+          <div class="flex items-center">
+            <div class="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mr-4">
+              <i class="${bus.icon} text-purple-600 text-xl"></i>
+            </div>
+            <div class="flex-1">
+              <h3 class="font-bold text-gray-800">${bus.name}</h3>
+              <p class="text-sm text-gray-600">Доход: ${bus.income} 🪙/сек</p>
+              <div class="flex items-center mt-1">
+                ${bus.owned ? 
+                  `<span class="badge bg-green-100 text-green-800">Приобретено</span>` : 
+                  `<span class="text-amber-600 font-bold"><i class="fas fa-coins mr-1"></i>${bus.price}</span>`
+                }
+              </div>
+            </div>
+            <button class="${bus.owned ? 
+              'bg-green-500 text-white px-4 py-2 rounded-lg cursor-default' : 
+              (score >= bus.price ? 
+                'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg' : 
+                'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default')
+            }">
+              ${bus.owned ? 'Куплено' : (score >= bus.price ? 'Купить' : 'Недостаточно')}
+            </button>
+          </div>
+        `;
+        
+        const button = busElem.querySelector("button");
+        if (!bus.owned) {
+          button.addEventListener("click", () => {
+            if (score >= bus.price) {
+              score -= bus.price;
+              bus.owned = true;
+              updateScore();
+              saveGame();
+              renderBusinesses();
+              showNotification("Бизнес куплен!", `Ты приобрел ${bus.name}`, "success");
+            }
+          });
+        }
+        
+        busList.appendChild(busElem);
       });
     }
 
@@ -415,11 +708,13 @@
 
     function openAirdrop() {
       document.getElementById("airdrop-id").value = userId;
-      document.getElementById("airdrop-modal").classList.add("active");
+      document.getElementById("airdrop-modal").classList.remove("hidden");
     }
 
     function closeAirdrop() {
-      document.getElementById("airdrop-modal").classList.remove("active");
+      document.getElementById("airdrop-modal").classList.add("hidden");
+      document.getElementById("airdrop-reason").value = "";
+      document.getElementById("airdrop-amount").value = "";
     }
 
     async function sendToDiscord(data) {
@@ -454,7 +749,7 @@
 
       // Показываем загрузку
       submitText.textContent = "Отправка...";
-      loader.style.display = "block";
+      loader.classList.remove("hidden");
       submitBtn.disabled = true;
 
       // Отправляем данные
@@ -465,19 +760,25 @@
       });
 
       // Возвращаем кнопку в исходное состояние
-      submitText.textContent = success ? "Отправлено ✅" : "Ошибка ❌";
-      loader.style.display = "none";
-      
       if (success) {
-        closeAirdrop();
+        submitText.textContent = "Отправлено!";
+        loader.classList.add("hidden");
+        
         setTimeout(() => {
-          submitText.textContent = "Отправить 🚀";
+          closeAirdrop();
+          submitText.textContent = "Отправить запрос";
           submitBtn.disabled = false;
-        }, 2000);
-        alert("✅ Запрос успешно отправлен! Ожидайте одобрения.");
+          showNotification("Запрос отправлен!", "Ожидайте одобрения администратора", "success");
+        }, 1500);
       } else {
-        submitBtn.disabled = false;
-        alert("❌ Ошибка отправки. Попробуйте позже.");
+        submitText.textContent = "Ошибка!";
+        loader.classList.add("hidden");
+        
+        setTimeout(() => {
+          submitText.textContent = "Отправить запрос";
+          submitBtn.disabled = false;
+          showNotification("Ошибка отправки", "Попробуйте позже", "error");
+        }, 1500);
       }
     });
 
@@ -486,12 +787,19 @@
     // ========================
 
     function init() {
+      // Загружаем сохраненные данные
+      initSkinsFromStorage();
+      initBusinessesFromStorage();
+      
       updateScore();
       updateEnergy();
       updateUpgradeDisplay();
       renderSkins();
       renderBusinesses();
       updateSkin();
+      
+      // Обработчик клика по персонажу
+      document.getElementById("character-container").addEventListener("click", tap);
     }
 
     init();
