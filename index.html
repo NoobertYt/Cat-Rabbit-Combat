@@ -3,9 +3,13 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>KotoKombat - Заводи котокроликов!</title>
+  <title>KotoKombat - Заводь котокроликов!</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Добавляем Firebase -->
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/9.22.0/firebase-auth-compat.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
     
@@ -165,6 +169,41 @@
         grid-template-columns: 1fr;
       }
     }
+
+    .loader {
+      border: 2px solid #f3f3f3;
+      border-top: 2px solid #8b5cf6;
+      border-radius: 50%;
+      width: 16px;
+      height: 16px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+
+    .auth-modal {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000;
+    }
+
+    .leaderboard-item {
+      transition: all 0.2s ease;
+    }
+
+    .leaderboard-item:hover {
+      background-color: #f3f4f6;
+    }
   </style>
 </head>
 <body class="min-h-screen p-4">
@@ -173,10 +212,18 @@
     <header class="flex justify-between items-center mb-6 p-4 bg-white rounded-xl shadow-lg">
       <div>
         <h1 class="text-3xl font-bold header-gradient">KotoKombat <i class="fas fa-paw"></i></h1>
-        <p class="text-sm text-gray-600">Заводи милых котокроликов и зарабатывай монеты!</p>
+        <p class="text-sm text-gray-600">Заводь милых котокроликов и зарабатывай монеты!</p>
       </div>
-      <div id="user-id" class="bg-purple-100 px-4 py-2 rounded-lg font-mono text-purple-800">
-        ID: <span id="uid" class="font-bold"></span>
+      <div class="flex items-center space-x-4">
+        <div id="user-info" class="hidden bg-purple-100 px-4 py-2 rounded-lg text-purple-800">
+          <i class="fas fa-user"></i> <span id="username">Гость</span>
+        </div>
+        <button id="auth-btn" class="bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg">
+          <i class="fas fa-sign-in-alt mr-1"></i> Войти
+        </button>
+        <div id="user-id" class="bg-purple-100 px-4 py-2 rounded-lg font-mono text-purple-800">
+          ID: <span id="uid" class="font-bold"></span>
+        </div>
       </div>
     </header>
 
@@ -228,6 +275,9 @@
           <button id="tab-businesses" class="tab-button flex-1 py-2 text-center font-medium" onclick="switchTab('businesses')">
             <i class="fas fa-industry mr-1"></i> Бизнесы
           </button>
+          <button id="tab-leaderboard" class="tab-button flex-1 py-2 text-center font-medium" onclick="switchTab('leaderboard')">
+            <i class="fas fa-trophy mr-1"></i> Топ игроков
+          </button>
         </div>
         
         <div id="shop-upgrades" class="shop-tab">
@@ -271,6 +321,11 @@
         <div id="shop-businesses" class="shop-tab hidden">
           <p class="text-sm text-gray-600 mb-3">Доход начисляется автоматически каждую секунду</p>
           <div id="businesses-list" class="space-y-3"></div>
+        </div>
+
+        <div id="shop-leaderboard" class="shop-tab hidden">
+          <p class="text-sm text-gray-600 mb-3">Топ 10 игроков по количеству монет</p>
+          <div id="leaderboard-list" class="space-y-2"></div>
         </div>
       </div>
     </div>
@@ -321,30 +376,92 @@
     </div>
   </div>
 
+  <!-- Модальное окно авторизации -->
+  <div id="auth-modal" class="auth-modal hidden">
+    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div class="bg-purple-500 p-4 flex justify-between items-center">
+        <h2 class="text-xl font-bold text-white"><i class="fas fa-user mr-2"></i> Авторизация</h2>
+        <button onclick="closeAuthModal()" class="text-white hover:text-purple-100 text-xl">
+          <i class="fas fa-times"></i>
+        </button>
+      </div>
+      
+      <div class="p-6">
+        <div id="login-form">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" id="login-email" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ваш email" required />
+          </div>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+            <input type="password" id="login-password" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ваш пароль" required />
+          </div>
+          
+          <button onclick="login()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-colors mb-4">
+            Войти
+          </button>
+          
+          <p class="text-center text-sm text-gray-600">
+            Нет аккаунта? <a href="#" onclick="showRegisterForm()" class="text-purple-500 hover:text-purple-600">Зарегистрироваться</a>
+          </p>
+        </div>
+        
+        <div id="register-form" class="hidden">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Имя пользователя</label>
+            <input type="text" id="register-username" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Придумайте имя" required />
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Email</label>
+            <input type="email" id="register-email" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Ваш email" required />
+          </div>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Пароль</label>
+            <input type="password" id="register-password" class="w-full p-3 border border-gray-300 rounded-lg" placeholder="Придумайте пароль" required />
+          </div>
+          
+          <button onclick="register()" class="w-full bg-purple-500 hover:bg-purple-600 text-white font-bold py-3 px-4 rounded-lg transition-colors mb-4">
+            Зарегистрироваться
+          </button>
+          
+          <p class="text-center text-sm text-gray-600">
+            Уже есть аккаунт? <a href="#" onclick="showLoginForm()" class="text-purple-500 hover:text-purple-600">Войти</a>
+          </p>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <script>
-    // Конфигурация
+    // Инициализация Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6b72LrwHZbIslrfVNjwTTJnC8Fu-bkwU",
+      authDomain: "kotocrol-d9f49.firebaseapp.com",
+      projectId: "kotocrol-d9f49",
+      storageBucket: "kotocrol-d9f49.firebasestorage.app",
+      messagingSenderId: "559692109036",
+      appId: "1:559692109036:web:c4b63571b26dfe3f14c1c9",
+      measurementId: "G-ZS81P946ZM"
+    };
+
+    // Инициализируем Firebase
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
+    const auth = firebase.auth();
+
+    // Конфигурация Discord Webhook
     const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1340000403462422528/1on5uXxAxOrHfdMWtVlboXGJIAOpbg0dyHs8ovPKysDHZEIg4IuIiCSRj7ErXGefGP18";
-    const userId = localStorage.getItem("user_id") || Math.floor(100000 + Math.random() * 900000);
-    localStorage.setItem("user_id", userId);
-    document.getElementById("uid").innerText = userId;
 
     // Данные игры
     const skins = [
-  { 
-    id: 0, 
-    name: "Котокролик 🐰😼", 
-    image: "images/kotokrolik.jpg", // или .jpg/.webp в зависимости от формата
-    owned: true, 
-    price: 0 
-  },
-  { 
-    id: 1, 
-    name: "Котокролитка 🎀", 
-    image: "images/kotokrolitka.jpg", // или .jpg/.webp
-    owned: false, 
-    price: 50 
-  }
-];
+      { id: 0, name: "Котокролик 🐰😼", image: "https://placekitten.com/200/200", owned: true, price: 0 },
+      { id: 1, name: "Котокролитка 🎀", image: "https://placekitten.com/201/201", owned: false, price: 50 },
+      { id: 2, name: "Золотой котокролик 🏆", image: "https://placekitten.com/202/202", owned: false, price: 500 },
+      { id: 3, name: "Космический котокролик 🚀", image: "https://placekitten.com/203/203", owned: false, price: 2000 }
+    ];
 
     const businesses = [
       { id: 0, name: "Кофейня ☕", price: 100, income: 1, owned: false, icon: "fa-mug-hot" },
@@ -356,36 +473,21 @@
     ];
 
     // Состояние игры
-    let score = parseInt(localStorage.getItem("score")) || 0;
-    let maxEnergy = parseInt(localStorage.getItem("maxEnergy")) || 100;
-    let energy = parseInt(localStorage.getItem("energy")) || maxEnergy;
-    let coinsPerClick = parseInt(localStorage.getItem("cpc")) || 1;
-    let currentSkin = parseInt(localStorage.getItem("skin")) || 0;
-    let upgradeLevel = parseInt(localStorage.getItem("upgradeLevel")) || 0;
-    let upgradeCost = parseInt(localStorage.getItem("upgradeCost")) || 50;
-    let energyUpgradeLevel = parseInt(localStorage.getItem("energyUpgradeLevel")) || 0;
-    let energyUpgradeCost = parseInt(localStorage.getItem("energyUpgradeCost")) || 50;
-
-    // Инициализация скинов и бизнесов
-    function initSkinsFromStorage() {
-      const savedSkins = localStorage.getItem("skins");
-      if (savedSkins) {
-        const parsedSkins = JSON.parse(savedSkins);
-        skins.forEach(skin => {
-          const savedSkin = parsedSkins.find(s => s.id === skin.id);
-          if (savedSkin) {
-            skin.owned = savedSkin.owned;
-          }
-        });
-      }
-    }
-
-    function initBusinessesFromStorage() {
-      businesses.forEach(b => {
-        const ownedStored = localStorage.getItem(`business-owned-${b.id}`);
-        if (ownedStored !== null) b.owned = ownedStored === "true";
-      });
-    }
+    let gameState = {
+      score: 0,
+      maxEnergy: 100,
+      energy: 100,
+      coinsPerClick: 1,
+      currentSkin: 0,
+      upgradeLevel: 0,
+      upgradeCost: 50,
+      energyUpgradeLevel: 0,
+      energyUpgradeCost: 50,
+      skins: [],
+      businesses: [],
+      userId: null,
+      username: "Гость"
+    };
 
     // ========================
     // Вспомогательные функции
@@ -427,7 +529,7 @@
       const floatingCoins = document.getElementById("floating-coins");
       const coin = document.createElement("div");
       coin.className = "floating-coin";
-      coin.innerHTML = `<i class="fas fa-coin"></i> +${coinsPerClick}`;
+      coin.innerHTML = `<i class="fas fa-coin"></i> +${gameState.coinsPerClick}`;
       coin.style.left = `${x}px`;
       coin.style.top = `${y}px`;
       
@@ -453,43 +555,28 @@
       // Активируем выбранную кнопку и показываем выбранную вкладку
       document.getElementById(`tab-${tabName}`).classList.add('active');
       document.getElementById(`shop-${tabName}`).classList.remove('hidden');
+      
+      // Если открыли таблицу лидеров, обновляем её
+      if (tabName === 'leaderboard') {
+        loadLeaderboard();
+      }
     }
 
     // ========================
     // Основные функции игры
     // ========================
 
-    function saveGame() {
-      localStorage.setItem("score", score);
-      localStorage.setItem("energy", energy);
-      localStorage.setItem("maxEnergy", maxEnergy);
-      localStorage.setItem("cpc", coinsPerClick);
-      localStorage.setItem("skin", currentSkin);
-      localStorage.setItem("upgradeLevel", upgradeLevel);
-      localStorage.setItem("upgradeCost", upgradeCost);
-      localStorage.setItem("energyUpgradeLevel", energyUpgradeLevel);
-      localStorage.setItem("energyUpgradeCost", energyUpgradeCost);
-      
-      // Сохраняем информацию о скинах
-      localStorage.setItem("skins", JSON.stringify(skins));
-      
-      // Сохраняем информацию о бизнесах
-      businesses.forEach(b => {
-        localStorage.setItem(`business-owned-${b.id}`, b.owned);
-      });
-    }
-
     function updateScore() {
-      document.getElementById("score").innerText = `${score} 🪙`;
+      document.getElementById("score").innerText = `${gameState.score} 🪙`;
     }
 
     function updateEnergy() {
-      const percent = (energy / maxEnergy) * 100;
+      const percent = (gameState.energy / gameState.maxEnergy) * 100;
       document.getElementById("energy-bar").style.width = `${percent}%`;
-      document.getElementById("energy-text").innerText = `${energy}/${maxEnergy}`;
+      document.getElementById("energy-text").innerText = `${gameState.energy}/${gameState.maxEnergy}`;
       
       // Анимация тряски при низкой энергии
-      if (energy < 20) {
+      if (gameState.energy < 20) {
         document.getElementById("energy-bar").classList.add('energy-low');
       } else {
         document.getElementById("energy-bar").classList.remove('energy-low');
@@ -498,21 +585,21 @@
 
     function updateSkin() {
       const img = document.getElementById("kotokrolik-img");
-      img.src = skins[currentSkin].image;
-      document.getElementById("kotokrolik-name").innerText = skins[currentSkin].name;
+      img.src = skins[gameState.currentSkin].image;
+      document.getElementById("kotokrolik-name").innerText = skins[gameState.currentSkin].name;
     }
 
     function updateUpgradeDisplay() {
-      document.getElementById("upgrade-level").innerText = upgradeLevel;
-      document.getElementById("upgrade-cost").innerText = upgradeCost;
-      document.getElementById("energy-upgrade-level").innerText = energyUpgradeLevel;
-      document.getElementById("energy-upgrade-cost").innerText = energyUpgradeCost;
+      document.getElementById("upgrade-level").innerText = gameState.upgradeLevel;
+      document.getElementById("upgrade-cost").innerText = gameState.upgradeCost;
+      document.getElementById("energy-upgrade-level").innerText = gameState.energyUpgradeLevel;
+      document.getElementById("energy-upgrade-cost").innerText = gameState.energyUpgradeCost;
     }
 
     function tap(event) {
-      if (energy > 0) {
-        score += coinsPerClick;
-        energy--;
+      if (gameState.energy > 0) {
+        gameState.score += gameState.coinsPerClick;
+        gameState.energy--;
         
         // Создаем летающую монетку
         if (event) {
@@ -524,7 +611,7 @@
         
         updateScore();
         updateEnergy();
-        saveGame();
+        saveGameToFirebase();
       } else {
         showNotification("Недостаточно энергии!", "Подожди, пока энергия восстановится", "warning");
       }
@@ -532,20 +619,25 @@
 
     // Восстановление энергии
     setInterval(() => {
-      if (energy < maxEnergy) {
-        energy += 1;
+      if (gameState.energy < gameState.maxEnergy) {
+        gameState.energy += 1;
         updateEnergy();
-        saveGame();
+        saveGameToFirebase();
       }
     }, 1000);
 
     // Пассивный доход
     setInterval(() => {
-      let income = businesses.reduce((sum, b) => sum + (b.owned ? b.income : 0), 0);
+      let income = 0;
+      gameState.businesses.forEach(businessId => {
+        const business = businesses.find(b => b.id === businessId);
+        if (business) income += business.income;
+      });
+      
       if (income > 0) {
-        score += income;
+        gameState.score += income;
         updateScore();
-        saveGame();
+        saveGameToFirebase();
       }
     }, 1000);
 
@@ -555,32 +647,32 @@
 
     // Апгрейды
     document.getElementById("buy-upgrade-btn").addEventListener("click", () => {
-      if (score >= upgradeCost) {
-        score -= upgradeCost;
-        coinsPerClick++;
-        upgradeLevel++;
-        upgradeCost = Math.floor(upgradeCost * 1.5);
+      if (gameState.score >= gameState.upgradeCost) {
+        gameState.score -= gameState.upgradeCost;
+        gameState.coinsPerClick++;
+        gameState.upgradeLevel++;
+        gameState.upgradeCost = Math.floor(gameState.upgradeCost * 1.5);
         updateScore();
         updateUpgradeDisplay();
-        saveGame();
-        showNotification("Улучшение куплено!", `Теперь за клик: ${coinsPerClick} монет`, "success");
+        saveGameToFirebase();
+        showNotification("Улучшение куплено!", `Теперь за клик: ${gameState.coinsPerClick} монет`, "success");
       } else {
         showNotification("Недостаточно монет!", "Заработай больше монет, чтобы купить улучшение", "error");
       }
     });
 
     document.getElementById("buy-energy-upgrade-btn").addEventListener("click", () => {
-      if (score >= energyUpgradeCost) {
-        score -= energyUpgradeCost;
-        energyUpgradeLevel++;
-        maxEnergy += 20;
-        energy = maxEnergy;
-        energyUpgradeCost = Math.floor(energyUpgradeCost * 1.5);
+      if (gameState.score >= gameState.energyUpgradeCost) {
+        gameState.score -= gameState.energyUpgradeCost;
+        gameState.energyUpgradeLevel++;
+        gameState.maxEnergy += 20;
+        gameState.energy = gameState.maxEnergy;
+        gameState.energyUpgradeCost = Math.floor(gameState.energyUpgradeCost * 1.5);
         updateScore();
         updateEnergy();
         updateUpgradeDisplay();
-        saveGame();
-        showNotification("Энергия улучшена!", `Макс. энергия увеличена до ${maxEnergy}`, "success");
+        saveGameToFirebase();
+        showNotification("Энергия улучшена!", `Макс. энергия увеличена до ${gameState.maxEnergy}`, "success");
       } else {
         showNotification("Недостаточно монет!", "Заработай больше монет, чтобы купить улучшение", "error");
       }
@@ -592,53 +684,54 @@
       skinsList.innerHTML = "";
       
       skins.forEach((skin, i) => {
+        const isOwned = gameState.skins.includes(skin.id);
         const skinElem = document.createElement("div");
-        skinElem.className = `shop-item bg-gray-50 p-4 rounded-lg ${skin.owned ? 'border-l-4 border-purple-500' : ''}`;
+        skinElem.className = `shop-item bg-gray-50 p-4 rounded-lg ${isOwned ? 'border-l-4 border-purple-500' : ''}`;
         
         skinElem.innerHTML = `
           <div class="flex items-center">
-            <img src="${skin.image}" class="w-16 h-16 rounded-lg object-cover mr-4 border-2 ${currentSkin === i ? 'border-purple-500' : 'border-gray-300'}">
+            <img src="${skin.image}" class="w-16 h-16 rounded-lg object-cover mr-4 border-2 ${gameState.currentSkin === i ? 'border-purple-500' : 'border-gray-300'}">
             <div class="flex-1">
               <h3 class="font-bold text-gray-800">${skin.name}</h3>
               <div class="flex items-center mt-1">
-                ${skin.owned ? 
+                ${isOwned ? 
                   `<span class="badge bg-green-100 text-green-800">Куплено</span>` : 
                   `<span class="text-amber-600 font-bold"><i class="fas fa-coins mr-1"></i>${skin.price}</span>`
                 }
               </div>
             </div>
-            <button class="${skin.owned ? 
-              (currentSkin === i ? 
+            <button class="${isOwned ? 
+              (gameState.currentSkin === i ? 
                 'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default' : 
                 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg') : 
-              (score >= skin.price ? 
+              (gameState.score >= skin.price ? 
                 'bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg' : 
                 'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default')
             }">
-              ${skin.owned ? 
-                (currentSkin === i ? 'Выбрано' : 'Выбрать') : 
-                (score >= skin.price ? 'Купить' : 'Недостаточно')
+              ${isOwned ? 
+                (gameState.currentSkin === i ? 'Выбрано' : 'Выбрать') : 
+                (gameState.score >= skin.price ? 'Купить' : 'Недостаточно')
               }
             </button>
           </div>
         `;
         
         const button = skinElem.querySelector("button");
-        if (!skin.owned || currentSkin !== i) {
+        if (isOwned || gameState.score >= skin.price) {
           button.addEventListener("click", () => {
-            if (skin.owned) {
-              currentSkin = i;
+            if (isOwned) {
+              gameState.currentSkin = i;
               updateSkin();
-              saveGame();
+              saveGameToFirebase();
               renderSkins();
               showNotification("Скин изменен!", `Теперь ты ${skin.name}`, "success");
-            } else if (score >= skin.price) {
-              score -= skin.price;
-              skin.owned = true;
-              currentSkin = i;
+            } else if (gameState.score >= skin.price) {
+              gameState.score -= skin.price;
+              gameState.skins.push(skin.id);
+              gameState.currentSkin = i;
               updateScore();
               updateSkin();
-              saveGame();
+              saveGameToFirebase();
               renderSkins();
               showNotification("Скин куплен!", `Теперь ты ${skin.name}`, "success");
             }
@@ -655,8 +748,9 @@
       busList.innerHTML = "";
       
       businesses.forEach(bus => {
+        const isOwned = gameState.businesses.includes(bus.id);
         const busElem = document.createElement("div");
-        busElem.className = `shop-item bg-gray-50 p-4 rounded-lg ${bus.owned ? 'border-l-4 border-green-500' : ''}`;
+        busElem.className = `shop-item bg-gray-50 p-4 rounded-lg ${isOwned ? 'border-l-4 border-green-500' : ''}`;
         
         busElem.innerHTML = `
           <div class="flex items-center">
@@ -667,31 +761,31 @@
               <h3 class="font-bold text-gray-800">${bus.name}</h3>
               <p class="text-sm text-gray-600">Доход: ${bus.income} 🪙/сек</p>
               <div class="flex items-center mt-1">
-                ${bus.owned ? 
+                ${isOwned ? 
                   `<span class="badge bg-green-100 text-green-800">Приобретено</span>` : 
                   `<span class="text-amber-600 font-bold"><i class="fas fa-coins mr-1"></i>${bus.price}</span>`
                 }
               </div>
             </div>
-            <button class="${bus.owned ? 
+            <button class="${isOwned ? 
               'bg-green-500 text-white px-4 py-2 rounded-lg cursor-default' : 
-              (score >= bus.price ? 
+              (gameState.score >= bus.price ? 
                 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg' : 
                 'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default')
             }">
-              ${bus.owned ? 'Куплено' : (score >= bus.price ? 'Купить' : 'Недостаточно')}
+              ${isOwned ? 'Куплено' : (gameState.score >= bus.price ? 'Купить' : 'Недостаточно')}
             </button>
           </div>
         `;
         
         const button = busElem.querySelector("button");
-        if (!bus.owned) {
+        if (!isOwned) {
           button.addEventListener("click", () => {
-            if (score >= bus.price) {
-              score -= bus.price;
-              bus.owned = true;
+            if (gameState.score >= bus.price) {
+              gameState.score -= bus.price;
+              gameState.businesses.push(bus.id);
               updateScore();
-              saveGame();
+              saveGameToFirebase();
               renderBusinesses();
               showNotification("Бизнес куплен!", `Ты приобрел ${bus.name}`, "success");
             }
@@ -702,12 +796,57 @@
       });
     }
 
+    // Таблица лидеров
+    async function loadLeaderboard() {
+      const leaderboardList = document.getElementById("leaderboard-list");
+      leaderboardList.innerHTML = '<div class="text-center py-4"><div class="loader mx-auto"></div></div>';
+      
+      try {
+        const snapshot = await db.collection("users")
+          .orderBy("score", "desc")
+          .limit(10)
+          .get();
+        
+        leaderboardList.innerHTML = "";
+        
+        if (snapshot.empty) {
+          leaderboardList.innerHTML = '<p class="text-center text-gray-500 py-4">Пока нет игроков в таблице лидеров</p>';
+          return;
+        }
+        
+        let rank = 1;
+        snapshot.forEach(doc => {
+          const user = doc.data();
+          const isCurrentUser = user.userId === gameState.userId;
+          
+          const leaderItem = document.createElement("div");
+          leaderItem.className = `leaderboard-item p-3 rounded-lg ${isCurrentUser ? 'bg-purple-100 border border-purple-200' : 'bg-gray-50'}`;
+          
+          leaderItem.innerHTML = `
+            <div class="flex items-center justify-between">
+              <div class="flex items-center">
+                <span class="font-bold ${rank === 1 ? 'text-yellow-500 text-lg' : rank === 2 ? 'text-gray-400' : rank === 3 ? 'text-amber-700' : 'text-gray-600'} w-6">${rank}</span>
+                <span class="ml-2 font-medium ${isCurrentUser ? 'text-purple-700' : 'text-gray-800'}">${user.username || 'Аноним'}</span>
+              </div>
+              <span class="font-bold text-amber-600">${user.score} 🪙</span>
+            </div>
+          `;
+          
+          leaderboardList.appendChild(leaderItem);
+          rank++;
+        });
+      } catch (error) {
+        console.error("Ошибка загрузки таблицы лидеров:", error);
+        leaderboardList.innerHTML = '<p class="text-center text-red-500 py-4">Ошибка загрузки таблицы лидеров</p>';
+      }
+    }
+
     // ========================
     // Airdrop система
     // ========================
 
     function openAirdrop() {
-      document.getElementById("airdrop-id").value = userId;
+      document.getElementById("airdrop-id").value = gameState.userId;
       document.getElementById("airdrop-modal").classList.remove("hidden");
     }
 
@@ -725,6 +864,7 @@
           body: JSON.stringify({
             content: `📦 **Новый запрос на Airdrop!**\n\n` +
                      `👤 ID: ${data.id}\n` +
+                     `👤 Имя: ${data.username}\n` +
                      `💬 Причина: ${data.reason}\n` +
                      `💰 Запрошено: ${data.amount} 🪙\n` +
                      `⏰ ${new Date().toLocaleString()}`
@@ -754,7 +894,8 @@
 
       // Отправляем данные
       const success = await sendToDiscord({
-        id: userId,
+        id: gameState.userId,
+        username: gameState.username,
         reason: reason,
         amount: amount
       });
@@ -783,28 +924,250 @@
     });
 
     // ========================
+    // Firebase функции
+    // ========================
+
+    // Сохранение игры в Firebase
+    async function saveGameToFirebase() {
+      if (!gameState.userId) return;
+      
+      try {
+        await db.collection("users").doc(gameState.userId).set({
+          userId: gameState.userId,
+          username: gameState.username,
+          score: gameState.score,
+          maxEnergy: gameState.maxEnergy,
+          energy: gameState.energy,
+          coinsPerClick: gameState.coinsPerClick,
+          currentSkin: gameState.currentSkin,
+          upgradeLevel: gameState.upgradeLevel,
+          upgradeCost: gameState.upgradeCost,
+          energyUpgradeLevel: gameState.energyUpgradeLevel,
+          energyUpgradeCost: gameState.energyUpgradeCost,
+          skins: gameState.skins,
+          businesses: gameState.businesses,
+          lastPlayed: firebase.firestore.FieldValue.serverTimestamp()
+        }, { merge: true });
+      } catch (error) {
+        console.error("Ошибка сохранения игры:", error);
+      }
+    }
+
+    // Загрузка игры из Firebase
+    async function loadGameFromFirebase(userId) {
+      try {
+        const doc = await db.collection("users").doc(userId).get();
+        
+        if (doc.exists) {
+          const data = doc.data();
+          gameState.score = data.score || 0;
+          gameState.maxEnergy = data.maxEnergy || 100;
+          gameState.energy = data.energy || gameState.maxEnergy;
+          gameState.coinsPerClick = data.coinsPerClick || 1;
+          gameState.currentSkin = data.currentSkin || 0;
+          gameState.upgradeLevel = data.upgradeLevel || 0;
+          gameState.upgradeCost = data.upgradeCost || 50;
+          gameState.energyUpgradeLevel = data.energyUpgradeLevel || 0;
+          gameState.energyUpgradeCost = data.energyUpgradeCost || 50;
+          gameState.skins = data.skins || [0];
+          gameState.businesses = data.businesses || [];
+          gameState.username = data.username || "Гость";
+          
+          updateScore();
+          updateEnergy();
+          updateUpgradeDisplay();
+          renderSkins();
+          renderBusinesses();
+          updateSkin();
+          
+          // Обновляем отображение имени пользователя
+          document.getElementById("username").textContent = gameState.username;
+          document.getElementById("user-info").classList.remove("hidden");
+        }
+      } catch (error) {
+        console.error("Ошибка загрузки игры:", error);
+        showNotification("Ошибка загрузки", "Не удалось загрузить сохраненную игру", "error");
+      }
+    }
+
+    // ========================
+    // Система аутентификации
+    // ========================
+
+    function openAuthModal() {
+      document.getElementById("auth-modal").classList.remove("hidden");
+    }
+
+    function closeAuthModal() {
+      document.getElementById("auth-modal").classList.add("hidden");
+    }
+
+    function showLoginForm() {
+      document.getElementById("login-form").classList.remove("hidden");
+      document.getElementById("register-form").classList.add("hidden");
+    }
+
+    function showRegisterForm() {
+      document.getElementById("login-form").classList.add("hidden");
+      document.getElementById("register-form").classList.remove("hidden");
+    }
+
+    async function login() {
+      const email = document.getElementById("login-email").value;
+      const password = document.getElementById("login-password").value;
+      
+      if (!email || !password) {
+        showNotification("Ошибка", "Заполните все поля", "error");
+        return;
+      }
+      
+      try {
+        const userCredential = await auth.signInWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        gameState.userId = user.uid;
+        document.getElementById("uid").textContent = user.uid;
+        
+        // Загружаем данные пользователя
+        await loadGameFromFirebase(user.uid);
+        
+        closeAuthModal();
+        showNotification("Успешный вход", `Добро пожаловать, ${gameState.username}!`, "success");
+        
+        // Обновляем кнопку авторизации
+        document.getElementById("auth-btn").innerHTML = '<i class="fas fa-sign-out-alt mr-1"></i> Выйти';
+      } catch (error) {
+        console.error("Ошибка входа:", error);
+        showNotification("Ошибка входа", "Неверный email или пароль", "error");
+      }
+    }
+
+    async function register() {
+      const username = document.getElementById("register-username").value;
+      const email = document.getElementById("register-email").value;
+      const password = document.getElementById("register-password").value;
+      
+      if (!username || !email || !password) {
+        showNotification("Ошибка", "Заполните все поля", "error");
+        return;
+      }
+      
+      try {
+        const userCredential = await auth.createUserWithEmailAndPassword(email, password);
+        const user = userCredential.user;
+        
+        gameState.userId = user.uid;
+        gameState.username = username;
+        document.getElementById("uid").textContent = user.uid;
+        document.getElementById("username").textContent = username;
+        
+        // Сохраняем начальное состояние игры
+        await saveGameToFirebase();
+        
+        closeAuthModal();
+        showNotification("Успешная регистрация", `Добро пожаловать, ${username}!`, "success");
+        
+        // Обновляем кнопку авторизации
+        document.getElementById("auth-btn").innerHTML = '<i class="fas fa-sign-out-alt mr-1"></i> Выйти';
+        document.getElementById("user-info").classList.remove("hidden");
+      } catch (error) {
+        console.error("Ошибка регистрации:", error);
+        showNotification("Ошибка регистрации", "Возможно, email уже используется", "error");
+      }
+    }
+
+    async function logout() {
+      try {
+        await auth.signOut();
+        gameState.userId = null;
+        gameState.username = "Гость";
+        
+        document.getElementById("uid").textContent = "не авторизован";
+        document.getElementById("username").textContent = "Гость";
+        document.getElementById("user-info").classList.add("hidden");
+        document.getElementById("auth-btn").innerHTML = '<i class="fas fa-sign-in-alt mr-1"></i> Войти';
+        
+        showNotification("Выход выполнен", "Вы вышли из аккаунта", "info");
+      } catch (error) {
+        console.error("Ошибка выхода:", error);
+      }
+    }
+
+    // Обработчик кнопки авторизации
+    document.getElementById("auth-btn").addEventListener("click", () => {
+      if (gameState.userId) {
+        logout();
+      } else {
+        openAuthModal();
+      }
+    });
+
+    // Слушатель изменения состояния аутентификации
+    auth.onAuthStateChanged(async (user) => {
+      if (user) {
+        gameState.userId = user.uid;
+        document.getElementById("uid").textContent = user.uid;
+        await loadGameFromFirebase(user.uid);
+        document.getElementById("auth-btn").innerHTML = '<i class="fas fa-sign-out-alt mr-1"></i> Выйти';
+      } else {
+        // Гость - создаем временный ID
+        const guestId = localStorage.getItem("guest_id") || `guest_${Math.floor(100000 + Math.random() * 900000)}`;
+        localStorage.setItem("guest_id", guestId);
+        
+        gameState.userId = guestId;
+        document.getElementById("uid").textContent = guestId;
+        
+        // Загружаем локальные сохранения для гостя
+        loadGameFromLocalStorage();
+      }
+    });
+
+    // ========================
+    // Локальное сохранение для гостей
+    // ========================
+
+    function saveGameToLocalStorage() {
+      if (!gameState.userId || gameState.userId.startsWith('guest_')) {
+        localStorage.setItem("gameState", JSON.stringify(gameState));
+      }
+    }
+
+    function loadGameFromLocalStorage() {
+      const savedGame = localStorage.getItem("gameState");
+      if (savedGame) {
+        const parsedGame = JSON.parse(savedGame);
+        Object.assign(gameState, parsedGame);
+        
+        updateScore();
+        updateEnergy();
+        updateUpgradeDisplay();
+        renderSkins();
+        renderBusinesses();
+        updateSkin();
+      }
+    }
+
+    // ========================
     // Инициализация игры
     // ========================
 
     function init() {
-      // Загружаем сохраненные данные
-      initSkinsFromStorage();
-      initBusinessesFromStorage();
-      
-      updateScore();
-      updateEnergy();
-      updateUpgradeDisplay();
-      renderSkins();
-      renderBusinesses();
-      updateSkin();
-      
       // Обработчик клика по персонажу
       document.getElementById("character-container").addEventListener("click", tap);
+      
+      // Периодическое автосохранение
+      setInterval(() => {
+        if (gameState.userId) {
+          if (gameState.userId.startsWith('guest_')) {
+            saveGameToLocalStorage();
+          } else {
+            saveGameToFirebase();
+          }
+        }
+      }, 30000);
     }
 
     init();
   </script>
 </body>
 </html>
-
-
