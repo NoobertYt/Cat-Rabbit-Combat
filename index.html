@@ -7,7 +7,7 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Firebase SDK -->
+  <!-- Firebase SDK (важно загружать до инициализации) -->
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
   <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
@@ -170,37 +170,6 @@
       text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
     
-    .stats-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-      gap: 1rem;
-      margin-top: 1rem;
-    }
-    
-    .stat-card {
-      background: white;
-      padding: 1rem;
-      border-radius: 0.75rem;
-      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
-    }
-    
-    .business-card {
-      background: linear-gradient(135deg, #f8fafc 0%, #f1f5f9 100%);
-      border: 2px solid #e2e8f0;
-      transition: all 0.3s ease;
-    }
-    
-    .business-card:hover {
-      transform: translateY(-5px);
-      border-color: var(--primary);
-      box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.2);
-    }
-    
-    .business-owned {
-      background: linear-gradient(135deg, #d1fae5 0%, #a7f3d0 100%);
-      border-color: #10b981;
-    }
-    
     /* Адаптивность */
     @media (max-width: 768px) {
       .character-img {
@@ -266,25 +235,14 @@
               </div>
             </div>
 
-            <!-- Статистика -->
-            <div class="stats-grid w-full max-w-md mb-6">
-              <div class="stat-card text-center">
-                <div class="text-2xl font-bold text-purple-600" id="cpc-display">1</div>
-                <div class="text-sm text-gray-600">Монет/клик</div>
-              </div>
-              <div class="stat-card text-center">
-                <div class="text-2xl font-bold text-blue-600" id="income-display">0</div>
-                <div class="text-sm text-gray-600">Монет/сек</div>
-              </div>
-              <div class="stat-card text-center">
-                <div class="text-2xl font-bold text-green-600" id="businesses-owned">0</div>
-                <div class="text-sm text-gray-600">Бизнесов</div>
-              </div>
+            <div class="grid grid-cols-2 gap-4 w-full max-w-md">
+              <button onclick="tap()" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105">
+                <i class="fas fa-hand-point-up mr-2"></i>Кликнуть
+              </button>
+              <button onclick="openAirdrop()" class="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105">
+                <i class="fas fa-gift mr-2"></i>Airdrop
+              </button>
             </div>
-
-            <button onclick="tap()" class="w-full max-w-md bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-4 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105 text-lg">
-              <i class="fas fa-hand-point-up mr-2"></i>Кликни по котокролику!
-            </button>
           </div>
         </div>
 
@@ -323,7 +281,7 @@
               </div>
             </div>
             
-            <div class="shop-item bg-gray-50 p-4 rounded-lg mb-3">
+            <div class="shop-item bg-gray-50 p-4 rounded-lg">
               <div class="flex justify-between items-center">
                 <div>
                   <h3 class="font-bold text-gray-800">Улучшение энергии</h3>
@@ -338,22 +296,6 @@
                 </button>
               </div>
             </div>
-            
-            <div class="shop-item bg-gray-50 p-4 rounded-lg">
-              <div class="flex justify-between items-center">
-                <div>
-                  <h3 class="font-bold text-gray-800">Автокликер</h3>
-                  <p class="text-sm text-gray-600">Автоматически кликает каждые 5 секунд</p>
-                  <div class="flex items-center mt-1">
-                    <span class="badge bg-green-100 text-green-800">Ур. <span id="autoclicker-level">0</span></span>
-                    <span class="text-amber-600 font-bold ml-2"><i class="fas fa-coins mr-1"></i> <span id="autoclicker-cost">1000</span></span>
-                  </div>
-                </div>
-                <button onclick="buyAutoclicker()" class="bg-green-500 hover:bg-green-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
-                  Купить
-                </button>
-              </div>
-            </div>
           </div>
           
           <div id="shop-skins" class="shop-tab hidden">
@@ -361,13 +303,8 @@
           </div>
           
           <div id="shop-businesses" class="shop-tab hidden">
-            <div class="mb-4 p-3 bg-blue-50 rounded-lg">
-              <p class="text-sm text-blue-800 flex items-center">
-                <i class="fas fa-info-circle mr-2"></i>
-                Доход начисляется автоматически каждую секунду. Всего доход: <span id="total-income" class="font-bold">0</span> 🪙/сек
-              </p>
-            </div>
-            <div id="businesses-list" class="space-y-3 max-h-[500px] overflow-y-auto pr-2"></div>
+            <p class="text-sm text-gray-600 mb-3">Доход начисляется автоматически каждую секунду</p>
+            <div id="businesses-list" class="space-y-3"></div>
           </div>
         </div>
       </div>
@@ -381,6 +318,40 @@
             <p id="notification-message" class="text-sm"></p>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно Airdrop -->
+    <div id="airdrop-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+        <div class="bg-amber-400 p-4 flex justify-between items-center">
+          <h2 class="text-xl font-bold text-white"><i class="fas fa-gift mr-2"></i> Запрос на Airdrop</h2>
+          <button onclick="closeAirdrop()" class="text-white hover:text-amber-100 text-xl">
+            <i class="fas fa-times"></i>
+          </button>
+        </div>
+        
+        <form id="airdrop-form" class="p-6">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">ID аккаунта</label>
+            <input type="text" id="airdrop-id" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100" readonly />
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Почему ты хочешь получить airdrop?</label>
+            <textarea id="airdrop-reason" class="w-full p-3 border border-gray-300 rounded-lg" rows="3" required></textarea>
+          </div>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Сколько монет ты хочешь?</label>
+            <input type="number" id="airdrop-amount" class="w-full p-3 border border-gray-300 rounded-lg" min="1" required />
+          </div>
+          
+          <button type="submit" class="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+            <span id="submit-text">Отправить запрос</span>
+            <div id="loader" class="loader ml-2 hidden"></div>
+          </button>
+        </form>
       </div>
     </div>
   </div>
@@ -402,7 +373,9 @@
     let userId = null;
     let userDocRef = null;
     let isBanned = false;
-    let autoclickerInterval = null;
+    
+    // Конфигурация
+    const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1340000403462422528/1on5uXxAxOrHfdMWtVlboXGJIAOpbg0dyHs8ovPKysDHZEIg4IuIiCSRj7ErXGefGP18";
     
     // Данные игры
     const skins = [
@@ -419,67 +392,16 @@
         image: "images/kotokrolitka.jpg", 
         owned: false, 
         price: 50 
-      },
-      { 
-        id: 2, 
-        name: "Золотой котокролик 👑", 
-        image: "https://placekitten.com/202/202", 
-        owned: false, 
-        price: 500 
-      },
-      { 
-        id: 3, 
-        name: "Котокролик-нинджа 🥷", 
-        image: "https://placekitten.com/203/203", 
-        owned: false, 
-        price: 200 
-      },
-      { 
-        id: 4, 
-        name: "Космический котокролик 🚀", 
-        image: "https://placekitten.com/204/204", 
-        owned: false, 
-        price: 1000 
       }
     ];
 
-    // Увеличенный список бизнесов
     const businesses = [
-      // Уровень 1
-      { id: 0, name: "Ларёк с мороженым 🍦", price: 100, income: 1, owned: false, icon: "fa-ice-cream", tier: 1 },
-      { id: 1, name: "Кофейня котокроликов ☕", price: 250, income: 2, owned: false, icon: "fa-mug-hot", tier: 1 },
-      { id: 2, name: "Книжный магазин 📚", price: 500, income: 5, owned: false, icon: "fa-book", tier: 1 },
-      { id: 3, name: "Цветочный магазин 🌸", price: 750, income: 8, owned: false, icon: "fa-seedling", tier: 1 },
-      
-      // Уровень 2
-      { id: 4, name: "Пиццерия 🍕", price: 1000, income: 12, owned: false, icon: "fa-pizza-slice", tier: 2 },
-      { id: 5, name: "Кинотеатр 🎬", price: 1500, income: 18, owned: false, icon: "fa-film", tier: 2 },
-      { id: 6, name: "Спортзал 💪", price: 2000, income: 25, owned: false, icon: "fa-dumbbell", tier: 2 },
-      { id: 7, name: "Салон красоты 💇‍♀️", price: 2500, income: 35, owned: false, icon: "fa-spa", tier: 2 },
-      
-      // Уровень 3
-      { id: 8, name: "Супермаркет 🛒", price: 3500, income: 50, owned: false, icon: "fa-shopping-cart", tier: 3 },
-      { id: 9, name: "Автосалон 🚗", price: 5000, income: 75, owned: false, icon: "fa-car", tier: 3 },
-      { id: 10, name: "Ресторан 🍽️", price: 7500, income: 100, owned: false, icon: "fa-utensils", tier: 3 },
-      { id: 11, name: "Отель 🏨", price: 10000, income: 150, owned: false, icon: "fa-hotel", tier: 3 },
-      
-      // Уровень 4
-      { id: 12, name: "Торговый центр 🛍️", price: 15000, income: 250, owned: false, icon: "fa-store", tier: 4 },
-      { id: 13, name: "IT компания 💻", price: 20000, income: 400, owned: false, icon: "fa-laptop-code", tier: 4 },
-      { id: 14, name: "Строительная фирма 🏗️", price: 30000, income: 600, owned: false, icon: "fa-hard-hat", tier: 4 },
-      { id: 15, name: "Больница 🏥", price: 40000, income: 800, owned: false, icon: "fa-hospital", tier: 4 },
-      
-      // Уровень 5
-      { id: 16, name: "Банк 🏦", price: 50000, income: 1200, owned: false, icon: "fa-university", tier: 5 },
-      { id: 17, name: "Авиакомпания ✈️", price: 75000, income: 2000, owned: false, icon: "fa-plane", tier: 5 },
-      { id: 18, name: "Космическая компания 🚀", price: 100000, income: 3000, owned: false, icon: "fa-rocket", tier: 5 },
-      { id: 19, name: "Крипто-ферма ₿", price: 150000, income: 5000, owned: false, icon: "fa-bitcoin", tier: 5 },
-      
-      // Уровень 6 (премиум)
-      { id: 20, name: "Курортный остров 🏝️", price: 250000, income: 10000, owned: false, icon: "fa-umbrella-beach", tier: 6 },
-      { id: 21, name: "Частный космопорт 🛸", price: 500000, income: 25000, owned: false, icon: "fa-satellite", tier: 6 },
-      { id: 22, name: "Империя котокроликов 👑", price: 1000000, income: 50000, owned: false, icon: "fa-crown", tier: 6 },
-      { id: 23, name: "Планета котокроликов 🌍", price: 5000000, income: 100000, owned: false, icon: "fa-globe", tier: 6 }
+      { id: 0, name: "Кофейня ☕", price: 100, income: 1, owned: false, icon: "fa-mug-hot" },
+      { id: 1, name: "Пекарня 🍞", price: 500, income: 5, owned: false, icon: "fa-bread-slice" },
+      { id: 2, name: "Магазин электроники 📱", price: 2000, income: 20, owned: false, icon: "fa-mobile" },
+      { id: 3, name: "Бургер Кинг 🍔", price: 5000, income: 100, owned: false, icon: "fa-hamburger" },
+      { id: 4, name: "Кинотеатр 🎬", price: 15000, income: 300, owned: false, icon: "fa-film" },
+      { id: 5, name: "Торговый центр 🛍️", price: 50000, income: 1000, owned: false, icon: "fa-shopping-cart" }
     ];
 
     // Состояние игры
@@ -492,9 +414,7 @@
       upgradeLevel: 0,
       upgradeCost: 50,
       energyUpgradeLevel: 0,
-      energyUpgradeCost: 50,
-      autoclickerLevel: 0,
-      autoclickerCost: 1000
+      energyUpgradeCost: 50
     };
 
     // ========================
@@ -505,10 +425,12 @@
       try {
         updateLoadingText("Инициализация Firebase...");
         
+        // Проверяем, загружены ли SDK Firebase
         if (typeof firebase === 'undefined') {
           throw new Error("Firebase SDK не загружен");
         }
         
+        // Конфигурация Firebase
         const firebaseConfig = {
           apiKey: "AIzaSyD6b72LrwHZbIslrfVNjwTTJnC8Fu-bkwU",
           authDomain: "kotocrol-d9f49.firebaseapp.com",
@@ -519,12 +441,14 @@
           measurementId: "G-ZS81P946ZM"
         };
         
+        // Инициализация
         firebaseApp = firebase.initializeApp(firebaseConfig);
         db = firebase.firestore();
         auth = firebase.auth();
         
         console.log("Firebase инициализирован!");
         
+        // Анонимная аутентификация
         updateLoadingText("Аутентификация...");
         const authResult = await auth.signInAnonymously();
         userId = authResult.user.uid;
@@ -532,11 +456,14 @@
         
         updateLoadingText("Проверка статуса...");
         
+        // Проверяем статус бана и загружаем данные
         await checkBanStatus();
         await loadGameData();
         
+        // Настраиваем слушатель в реальном времени
         setupRealtimeListener();
         
+        // Показываем игру
         setTimeout(() => {
           document.getElementById("loading-screen").style.display = "none";
           document.getElementById("uid").textContent = userId.substring(0, 8) + "...";
@@ -581,6 +508,7 @@
         if (userDoc.exists) {
           const data = userDoc.data();
           
+          // Загружаем основные данные
           gameData.score = data.score || 0;
           gameData.energy = data.energy || 100;
           gameData.maxEnergy = data.maxEnergy || 100;
@@ -590,9 +518,8 @@
           gameData.upgradeCost = data.upgradeCost || 50;
           gameData.energyUpgradeLevel = data.energyUpgradeLevel || 0;
           gameData.energyUpgradeCost = data.energyUpgradeCost || 50;
-          gameData.autoclickerLevel = data.autoclickerLevel || 0;
-          gameData.autoclickerCost = data.autoclickerCost || 1000;
           
+          // Загружаем скины
           if (data.skins && Array.isArray(data.skins)) {
             data.skins.forEach(savedSkin => {
               const skin = skins.find(s => s.id === savedSkin.id);
@@ -600,6 +527,7 @@
             });
           }
           
+          // Загружаем бизнесы
           if (data.businesses && Array.isArray(data.businesses)) {
             data.businesses.forEach(savedBusiness => {
               const business = businesses.find(b => b.id === savedBusiness.id);
@@ -608,6 +536,7 @@
           }
           
         } else {
+          // Создаем нового пользователя
           await createNewUser();
         }
         
@@ -629,8 +558,6 @@
           upgradeCost: 50,
           energyUpgradeLevel: 0,
           energyUpgradeCost: 50,
-          autoclickerLevel: 0,
-          autoclickerCost: 1000,
           skins: skins.map(skin => ({ id: skin.id, owned: skin.id === 0 })),
           businesses: businesses.map(b => ({ id: b.id, owned: false })),
           banned: false,
@@ -661,8 +588,6 @@
           upgradeCost: gameData.upgradeCost,
           energyUpgradeLevel: gameData.energyUpgradeLevel,
           energyUpgradeCost: gameData.energyUpgradeCost,
-          autoclickerLevel: gameData.autoclickerLevel,
-          autoclickerCost: gameData.autoclickerCost,
           skins: skins.map(skin => ({ id: skin.id, owned: skin.owned })),
           businesses: businesses.map(b => ({ id: b.id, owned: b.owned })),
           lastLogin: firebase.firestore.FieldValue.serverTimestamp()
@@ -676,6 +601,7 @@
     }
 
     function setupRealtimeListener() {
+      // Слушаем изменения статуса бана в реальном времени
       userDocRef.onSnapshot((doc) => {
         if (doc.exists) {
           const data = doc.data();
@@ -725,6 +651,7 @@
       document.getElementById("uid").textContent = userId;
       updateBanStatus(false);
       
+      // Загружаем из localStorage
       gameData.score = parseInt(localStorage.getItem("score")) || 0;
       gameData.energy = parseInt(localStorage.getItem("energy")) || 100;
       gameData.maxEnergy = parseInt(localStorage.getItem("maxEnergy")) || 100;
@@ -734,9 +661,8 @@
       gameData.upgradeCost = parseInt(localStorage.getItem("upgradeCost")) || 50;
       gameData.energyUpgradeLevel = parseInt(localStorage.getItem("energyUpgradeLevel")) || 0;
       gameData.energyUpgradeCost = parseInt(localStorage.getItem("energyUpgradeCost")) || 50;
-      gameData.autoclickerLevel = parseInt(localStorage.getItem("autoclickerLevel")) || 0;
-      gameData.autoclickerCost = parseInt(localStorage.getItem("autoclickerCost")) || 1000;
       
+      // Скины
       const savedSkins = localStorage.getItem("skins");
       if (savedSkins) {
         const parsedSkins = JSON.parse(savedSkins);
@@ -748,6 +674,7 @@
         });
       }
       
+      // Бизнесы
       businesses.forEach(b => {
         const ownedStored = localStorage.getItem(`business-owned-${b.id}`);
         if (ownedStored !== null) b.owned = ownedStored === "true";
@@ -769,8 +696,6 @@
       localStorage.setItem("upgradeCost", gameData.upgradeCost);
       localStorage.setItem("energyUpgradeLevel", gameData.energyUpgradeLevel);
       localStorage.setItem("energyUpgradeCost", gameData.energyUpgradeCost);
-      localStorage.setItem("autoclickerLevel", gameData.autoclickerLevel);
-      localStorage.setItem("autoclickerCost", gameData.autoclickerCost);
       
       localStorage.setItem("skins", JSON.stringify(skins.map(s => ({ id: s.id, owned: s.owned }))));
       
@@ -844,29 +769,6 @@
       
       document.getElementById(`tab-${tabName}`).classList.add('active');
       document.getElementById(`shop-${tabName}`).classList.remove('hidden');
-      
-      if (tabName === 'businesses') {
-        updateTotalIncome();
-      }
-    }
-
-    function updateStats() {
-      document.getElementById("cpc-display").textContent = gameData.coinsPerClick;
-      
-      const totalIncome = businesses.reduce((sum, b) => sum + (b.owned ? b.income : 0), 0);
-      document.getElementById("income-display").textContent = totalIncome;
-      
-      const businessesOwned = businesses.filter(b => b.owned).length;
-      document.getElementById("businesses-owned").textContent = businessesOwned;
-      
-      if (tabName === 'businesses') {
-        updateTotalIncome();
-      }
-    }
-
-    function updateTotalIncome() {
-      const totalIncome = businesses.reduce((sum, b) => sum + (b.owned ? b.income : 0), 0);
-      document.getElementById("total-income").textContent = totalIncome;
     }
 
     // ========================
@@ -905,8 +807,6 @@
       document.getElementById("upgrade-cost").innerText = gameData.upgradeCost;
       document.getElementById("energy-upgrade-level").innerText = gameData.energyUpgradeLevel;
       document.getElementById("energy-upgrade-cost").innerText = gameData.energyUpgradeCost;
-      document.getElementById("autoclicker-level").innerText = gameData.autoclickerLevel;
-      document.getElementById("autoclicker-cost").innerText = gameData.autoclickerCost;
     }
 
     function tap(event) {
@@ -925,7 +825,6 @@
         
         updateScore();
         updateEnergy();
-        updateStats();
         if (userDocRef) {
           saveGameData();
         } else {
@@ -947,7 +846,6 @@
         
         updateScore();
         updateUpgradeDisplay();
-        updateStats();
         if (userDocRef) {
           saveGameData();
         } else {
@@ -983,54 +881,8 @@
       }
     }
 
-    function buyAutoclicker() {
-      if (isBanned) return;
-      
-      if (gameData.score >= gameData.autoclickerCost) {
-        gameData.score -= gameData.autoclickerCost;
-        gameData.autoclickerLevel++;
-        gameData.autoclickerCost = Math.floor(gameData.autoclickerCost * 2);
-        
-        updateScore();
-        updateUpgradeDisplay();
-        if (userDocRef) {
-          saveGameData();
-        } else {
-          saveLocalData();
-        }
-        
-        // Запускаем автокликер
-        startAutoclicker();
-        
-        showNotification("Автокликер куплен!", `Автоматические клики каждые 5 секунд (Уровень: ${gameData.autoclickerLevel})`, "success");
-      } else {
-        showNotification("Недостаточно монет!", "Заработай больше монет, чтобы купить автокликер", "error");
-      }
-    }
-
-    function startAutoclicker() {
-      if (autoclickerInterval) {
-        clearInterval(autoclickerInterval);
-      }
-      
-      autoclickerInterval = setInterval(() => {
-        if (gameData.autoclickerLevel > 0 && !isBanned) {
-          const clicks = gameData.autoclickerLevel;
-          for (let i = 0; i < clicks; i++) {
-            gameData.score += gameData.coinsPerClick;
-          }
-          updateScore();
-          if (userDocRef) {
-            saveGameData();
-          } else {
-            saveLocalData();
-          }
-        }
-      }, 5000); // Каждые 5 секунд
-    }
-
     // ========================
-    // Скины
+    // Скины (старая система)
     // ========================
 
     function renderSkins() {
@@ -1106,99 +958,148 @@
     }
 
     // ========================
-    // Бизнесы (расширенный список)
+    // Бизнесы
     // ========================
 
     function renderBusinesses() {
       const busList = document.getElementById("businesses-list");
       busList.innerHTML = "";
       
-      // Группируем бизнесы по уровням
-      const tiers = {};
       businesses.forEach(bus => {
-        if (!tiers[bus.tier]) {
-          tiers[bus.tier] = [];
-        }
-        tiers[bus.tier].push(bus);
-      });
-      
-      // Создаем секции для каждого уровня
-      Object.keys(tiers).sort((a, b) => a - b).forEach(tier => {
-        const tierBusinesses = tiers[tier];
-        const ownedCount = tierBusinesses.filter(b => b.owned).length;
+        const busElem = document.createElement("div");
+        busElem.className = `shop-item bg-gray-50 p-4 rounded-lg ${bus.owned ? 'border-l-4 border-green-500' : ''}`;
         
-        const tierHeader = document.createElement("div");
-        tierHeader.className = "mb-3 mt-4 first:mt-0";
-        tierHeader.innerHTML = `
-          <div class="flex justify-between items-center">
-            <h3 class="font-bold text-gray-700">Уровень ${tier}</h3>
-            <span class="text-sm text-gray-600">${ownedCount}/${tierBusinesses.length}</span>
-          </div>
-        `;
-        busList.appendChild(tierHeader);
-        
-        tierBusinesses.forEach(bus => {
-          const busElem = document.createElement("div");
-          busElem.className = `business-card p-4 rounded-lg mb-2 ${bus.owned ? 'business-owned' : ''}`;
-          
-          const tierColors = {
-            1: 'from-blue-50 to-blue-100',
-            2: 'from-green-50 to-green-100',
-            3: 'from-yellow-50 to-yellow-100',
-            4: 'from-orange-50 to-orange-100',
-            5: 'from-red-50 to-red-100',
-            6: 'from-purple-50 to-purple-100'
-          };
-          
-          busElem.innerHTML = `
-            <div class="flex items-center justify-between">
-              <div class="flex items-center">
-                <div class="w-12 h-12 rounded-lg ${tierColors[tier]} flex items-center justify-center mr-4">
-                  <i class="${bus.icon} text-${['blue', 'green', 'yellow', 'orange', 'red', 'purple'][tier-1]}-600 text-xl"></i>
-                </div>
-                <div>
-                  <h3 class="font-bold text-gray-800">${bus.name}</h3>
-                  <p class="text-sm text-gray-600">Доход: <span class="font-bold text-green-600">${bus.income} 🪙/сек</span></p>
-                </div>
-              </div>
-              <div class="text-right">
-                <div class="text-amber-600 font-bold mb-1"><i class="fas fa-coins mr-1"></i>${bus.price.toLocaleString()}</div>
-                <button class="${bus.owned ? 
-                  'bg-green-500 text-white px-4 py-2 rounded-lg cursor-default text-sm' : 
-                  (gameData.score >= bus.price ? 
-                    `bg-${['blue', 'green', 'yellow', 'orange', 'red', 'purple'][tier-1]}-500 hover:bg-${['blue', 'green', 'yellow', 'orange', 'red', 'purple'][tier-1]}-600 text-white px-4 py-2 rounded-lg text-sm` : 
-                    'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default text-sm')
-                }">
-                  ${bus.owned ? 'Куплено' : (gameData.score >= bus.price ? 'Купить' : 'Недостаточно')}
-                </button>
+        busElem.innerHTML = `
+          <div class="flex items-center">
+            <div class="w-12 h-12 rounded-lg bg-purple-100 flex items-center justify-center mr-4">
+              <i class="${bus.icon} text-purple-600 text-xl"></i>
+            </div>
+            <div class="flex-1">
+              <h3 class="font-bold text-gray-800">${bus.name}</h3>
+              <p class="text-sm text-gray-600">Доход: ${bus.income} 🪙/сек</p>
+              <div class="flex items-center mt-1">
+                ${bus.owned ? 
+                  `<span class="badge bg-green-100 text-green-800">Приобретено</span>` : 
+                  `<span class="text-amber-600 font-bold"><i class="fas fa-coins mr-1"></i>${bus.price}</span>`
+                }
               </div>
             </div>
-          `;
-          
-          const button = busElem.querySelector("button");
-          if (!bus.owned) {
-            button.addEventListener("click", () => {
-              if (isBanned) return;
-              
-              if (gameData.score >= bus.price) {
-                gameData.score -= bus.price;
-                bus.owned = true;
-                updateScore();
-                updateStats();
-                updateTotalIncome();
-                if (userDocRef) {
-                  saveGameData();
-                } else {
-                  saveLocalData();
-                }
-                renderBusinesses();
-                showNotification("Бизнес куплен!", `Ты приобрел ${bus.name} (+${bus.income} 🪙/сек)`, "success");
+            <button class="${bus.owned ? 
+              'bg-green-500 text-white px-4 py-2 rounded-lg cursor-default' : 
+              (gameData.score >= bus.price ? 
+                'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg' : 
+                'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default')
+            }">
+              ${bus.owned ? 'Куплено' : (gameData.score >= bus.price ? 'Купить' : 'Недостаточно')}
+            </button>
+          </div>
+        `;
+        
+        const button = busElem.querySelector("button");
+        if (!bus.owned) {
+          button.addEventListener("click", () => {
+            if (isBanned) return;
+            
+            if (gameData.score >= bus.price) {
+              gameData.score -= bus.price;
+              bus.owned = true;
+              updateScore();
+              if (userDocRef) {
+                saveGameData();
+              } else {
+                saveLocalData();
               }
-            });
-          }
-          
-          busList.appendChild(busElem);
+              renderBusinesses();
+              showNotification("Бизнес куплен!", `Ты приобрел ${bus.name}`, "success");
+            }
+          });
+        }
+        
+        busList.appendChild(busElem);
+      });
+    }
+
+    // ========================
+    // Airdrop система
+    // ========================
+
+    function openAirdrop() {
+      if (isBanned) return;
+      
+      document.getElementById("airdrop-id").value = userId;
+      document.getElementById("airdrop-modal").classList.remove("hidden");
+    }
+
+    function closeAirdrop() {
+      document.getElementById("airdrop-modal").classList.add("hidden");
+      document.getElementById("airdrop-reason").value = "";
+      document.getElementById("airdrop-amount").value = "";
+    }
+
+    async function sendToDiscord(data) {
+      try {
+        const response = await fetch(DISCORD_WEBHOOK, {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            content: `📦 **Новый запрос на Airdrop!**\n\n` +
+                     `👤 ID: ${data.id}\n` +
+                     `💬 Причина: ${data.reason}\n` +
+                     `💰 Запрошено: ${data.amount} 🪙\n` +
+                     `⏰ ${new Date().toLocaleString()}`
+          })
         });
+        return response.ok;
+      } catch (error) {
+        console.error("Ошибка отправки:", error);
+        return false;
+      }
+    }
+
+    function initAirdrop() {
+      document.getElementById("airdrop-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.querySelector("#airdrop-form button[type='submit']");
+        const submitText = document.getElementById("submit-text");
+        const loader = document.getElementById("loader");
+        
+        const reason = document.getElementById("airdrop-reason").value.trim();
+        const amount = document.getElementById("airdrop-amount").value;
+
+        // Показываем загрузку
+        submitText.textContent = "Отправка...";
+        loader.classList.remove("hidden");
+        submitBtn.disabled = true;
+
+        // Отправляем данные
+        const success = await sendToDiscord({
+          id: userId,
+          reason: reason,
+          amount: amount
+        });
+
+        // Возвращаем кнопку в исходное состояние
+        if (success) {
+          submitText.textContent = "Отправлено!";
+          loader.classList.add("hidden");
+          
+          setTimeout(() => {
+            closeAirdrop();
+            submitText.textContent = "Отправить запрос";
+            submitBtn.disabled = false;
+            showNotification("Запрос отправлен!", "Ожидайте одобрения администратора", "success");
+          }, 1500);
+        } else {
+          submitText.textContent = "Ошибка!";
+          loader.classList.add("hidden");
+          
+          setTimeout(() => {
+            submitText.textContent = "Отправить запрос";
+            submitBtn.disabled = false;
+            showNotification("Ошибка отправки", "Попробуйте позже", "error");
+          }, 1500);
+        }
       });
     }
 
@@ -1210,18 +1111,15 @@
       updateScore();
       updateEnergy();
       updateUpgradeDisplay();
-      updateStats();
       renderSkins();
       renderBusinesses();
       updateSkin();
       
-      // Запускаем автокликер если он есть
-      if (gameData.autoclickerLevel > 0) {
-        startAutoclicker();
-      }
-      
       // Обработчик клика по персонажу
       document.getElementById("character-container").addEventListener("click", tap);
+      
+      // Инициализация airdrop
+      initAirdrop();
       
       // Восстановление энергии
       setInterval(() => {
@@ -1257,7 +1155,9 @@
     // Запуск приложения
     // ========================
 
+    // Ждем загрузки всех ресурсов
     window.addEventListener('load', function() {
+      // Ждем немного, чтобы Firebase SDK точно загрузились
       setTimeout(() => {
         if (typeof firebase !== 'undefined' && firebase.app) {
           initFirebase();
