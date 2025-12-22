@@ -6,6 +6,57 @@
   <title>KotoKombat - Заводь котокроликов!</title>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  
+  <!-- Firebase SDKs -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
+    import { 
+      getFirestore, 
+      doc, 
+      getDoc, 
+      setDoc,
+      updateDoc,
+      onSnapshot
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
+    import { 
+      getAuth, 
+      onAuthStateChanged,
+      signInAnonymously
+    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
+
+    // Конфигурация Firebase
+    const firebaseConfig = {
+      apiKey: "AIzaSyD6b72LrwHZbIslrfVNjwTTJnC8Fu-bkwU",
+      authDomain: "kotocrol-d9f49.firebaseapp.com",
+      projectId: "kotocrol-d9f49",
+      storageBucket: "kotocrol-d9f49.firebasestorage.app",
+      messagingSenderId: "559692109036",
+      appId: "1:559692109036:web:c4b63571b26dfe3f14c1c9",
+      measurementId: "G-ZS81P946ZM"
+    };
+
+    // Инициализация Firebase
+    const app = initializeApp(firebaseConfig);
+    const db = getFirestore(app);
+    const auth = getAuth(app);
+
+    // Экспортируем глобально
+    window.firebaseApp = {
+      app,
+      db,
+      auth,
+      getDoc,
+      setDoc,
+      updateDoc,
+      onSnapshot,
+      doc,
+      onAuthStateChanged,
+      signInAnonymously
+    };
+
+    console.log("Firebase инициализирован!");
+  </script>
+
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
     
@@ -46,6 +97,7 @@
       height: 220px;
       object-fit: cover;
       border: 4px solid #ddd6fe;
+      border-radius: 20px;
       box-shadow: 0 10px 25px -5px rgba(139, 92, 246, 0.4), 0 5px 10px -5px rgba(236, 72, 153, 0.2);
     }
     
@@ -154,6 +206,15 @@
       75% { transform: translateX(5px); }
     }
     
+    .ban-modal {
+      background: linear-gradient(135deg, #ff6b6b 0%, #c92a2a 100%) !important;
+    }
+    
+    .ban-text {
+      color: white;
+      text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+    }
+    
     /* Адаптивность */
     @media (max-width: 768px) {
       .character-img {
@@ -168,183 +229,213 @@
   </style>
 </head>
 <body class="min-h-screen p-4">
-  <div class="game-container">
-    <!-- Шапка -->
-    <header class="flex justify-between items-center mb-6 p-4 bg-white rounded-xl shadow-lg">
-      <div>
-        <h1 class="text-3xl font-bold header-gradient">KotoKombat <i class="fas fa-paw"></i></h1>
-        <p class="text-sm text-gray-600">Заводь милых котокроликов и зарабатывай монеты!</p>
-      </div>
-      <div id="user-id" class="bg-purple-100 px-4 py-2 rounded-lg font-mono text-purple-800">
-        ID: <span id="uid" class="font-bold"></span>
-      </div>
-    </header>
-
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
-      <!-- Левая колонка - Основная игра -->
-      <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
-        <div class="flex flex-col items-center justify-center">
-          <div class="character-container relative mb-6" id="character-container">
-            <img id="kotokrolik-img" src="https://placekitten.com/200/200" class="character-img rounded-full pulse">
-            <div id="floating-coins"></div>
-          </div>
-          
-          <div class="text-center mb-6">
-            <p id="kotokrolik-name" class="text-xl font-bold text-purple-700 mb-2">Котокролик 🐰😼</p>
-            <p id="score" class="text-3xl font-bold text-amber-500 mb-2">0 🪙</p>
-            <div class="w-full max-w-xs mx-auto mb-2">
-              <p class="text-sm font-medium text-blue-600 mb-1">Энергия ⚡</p>
-              <div class="progress-bar">
-                <div id="energy-bar" class="progress-fill" style="width: 100%;"></div>
-              </div>
-              <p id="energy-text" class="text-sm text-right mt-1 text-gray-600">100/100</p>
-            </div>
-          </div>
-
-          <div class="grid grid-cols-2 gap-4 w-full max-w-md">
-            <button onclick="tap()" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105">
-              <i class="fas fa-hand-point-up mr-2"></i>Кликнуть
-            </button>
-            <button onclick="openAirdrop()" class="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105">
-              <i class="fas fa-gift mr-2"></i>Airdrop
-            </button>
-          </div>
-        </div>
-      </div>
-
-      <!-- Правая колонка - Магазин и бизнесы -->
-      <div class="bg-white rounded-2xl shadow-lg p-6">
-        <h2 class="text-xl font-bold text-purple-800 mb-4 flex items-center">
-          <i class="fas fa-store mr-2"></i> Магазин
-        </h2>
-        
-        <div class="flex border-b border-gray-200 mb-4">
-          <button id="tab-upgrades" class="tab-button active flex-1 py-2 text-center font-medium" onclick="switchTab('upgrades')">
-            <i class="fas fa-tools mr-1"></i> Улучшения
-          </button>
-          <button id="tab-skins" class="tab-button flex-1 py-2 text-center font-medium" onclick="switchTab('skins')">
-            <i class="fas fa-palette mr-1"></i> Скины
-          </button>
-          <button id="tab-businesses" class="tab-button flex-1 py-2 text-center font-medium" onclick="switchTab('businesses')">
-            <i class="fas fa-industry mr-1"></i> Бизнесы
-          </button>
-        </div>
-        
-        <div id="shop-upgrades" class="shop-tab">
-          <div class="shop-item bg-gray-50 p-4 rounded-lg mb-3">
-            <div class="flex justify-between items-center">
-              <div>
-                <h3 class="font-bold text-gray-800">Улучшение клика</h3>
-                <p class="text-sm text-gray-600">+1 к монетам за клик</p>
-                <div class="flex items-center mt-1">
-                  <span class="badge bg-purple-100 text-purple-800">Ур. <span id="upgrade-level">0</span></span>
-                  <span class="text-amber-600 font-bold ml-2"><i class="fas fa-coins mr-1"></i> <span id="upgrade-cost">50</span></span>
-                </div>
-              </div>
-              <button id="buy-upgrade-btn" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
-                Купить
-              </button>
-            </div>
-          </div>
-          
-          <div class="shop-item bg-gray-50 p-4 rounded-lg">
-            <div class="flex justify-between items-center">
-              <div>
-                <h3 class="font-bold text-gray-800">Улучшение энергии</h3>
-                <p class="text-sm text-gray-600">+20 к максимальной энергии</p>
-                <div class="flex items-center mt-1">
-                  <span class="badge bg-blue-100 text-blue-800">Ур. <span id="energy-upgrade-level">0</span></span>
-                  <span class="text-amber-600 font-bold ml-2"><i class="fas fa-coins mr-1"></i> <span id="energy-upgrade-cost">50</span></span>
-                </div>
-              </div>
-              <button id="buy-energy-upgrade-btn" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
-                Купить
-              </button>
-            </div>
-          </div>
-        </div>
-        
-        <div id="shop-skins" class="shop-tab hidden">
-          <div id="skins-list" class="space-y-3"></div>
-        </div>
-        
-        <div id="shop-businesses" class="shop-tab hidden">
-          <p class="text-sm text-gray-600 mb-3">Доход начисляется автоматически каждую секунду</p>
-          <div id="businesses-list" class="space-y-3"></div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Уведомление -->
-    <div id="notification" class="notification">
-      <div class="flex items-start">
-        <div id="notification-icon" class="mr-3 text-xl"></div>
-        <div>
-          <h3 id="notification-title" class="font-bold"></h3>
-          <p id="notification-message" class="text-sm"></p>
-        </div>
+  <!-- Модальное окно бана -->
+  <div id="ban-modal" class="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 hidden">
+    <div class="ban-modal rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+      <div class="p-6 text-center">
+        <div class="text-6xl mb-4">🚫</div>
+        <h2 class="text-2xl font-bold ban-text mb-2">ВЫ ЗАБАНЕНЫ</h2>
+        <p id="ban-reason" class="ban-text mb-4 text-lg">Нарушение правил игры</p>
+        <p class="ban-text opacity-90 mb-6">Доступ к игре ограничен администратором</p>
+        <button onclick="location.reload()" class="bg-white text-red-600 font-bold py-3 px-6 rounded-lg hover:bg-gray-100 transition-colors">
+          Проверить снова
+        </button>
       </div>
     </div>
   </div>
 
-  <!-- Модальное окно Airdrop -->
-  <div id="airdrop-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
-    <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
-      <div class="bg-amber-400 p-4 flex justify-between items-center">
-        <h2 class="text-xl font-bold text-white"><i class="fas fa-gift mr-2"></i> Запрос на Airdrop</h2>
-        <button onclick="closeAirdrop()" class="text-white hover:text-amber-100 text-xl">
-          <i class="fas fa-times"></i>
-        </button>
+  <!-- Контент игры -->
+  <div id="game-content">
+    <div class="game-container">
+      <!-- Шапка -->
+      <header class="flex justify-between items-center mb-6 p-4 bg-white rounded-xl shadow-lg">
+        <div>
+          <h1 class="text-3xl font-bold header-gradient">KotoKombat <i class="fas fa-paw"></i></h1>
+          <p class="text-sm text-gray-600">Заводь милых котокроликов и зарабатывай монеты!</p>
+        </div>
+        <div class="bg-purple-100 px-4 py-2 rounded-lg font-mono text-purple-800">
+          ID: <span id="uid" class="font-bold">Загрузка...</span>
+          <div id="ban-status" class="text-xs px-2 py-1 rounded bg-green-100 text-green-800 mt-1">Статус: Проверка...</div>
+        </div>
+      </header>
+
+      <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        <!-- Левая колонка - Основная игра -->
+        <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
+          <div class="flex flex-col items-center justify-center">
+            <div class="character-container relative mb-6" id="character-container">
+              <img id="kotokrolik-img" src="images/kotokrolik.jpg" class="character-img rounded-lg pulse" onerror="this.src='https://placekitten.com/200/200'">
+              <div id="floating-coins"></div>
+            </div>
+            
+            <div class="text-center mb-6">
+              <p id="kotokrolik-name" class="text-xl font-bold text-purple-700 mb-2">Котокролик 🐰😼</p>
+              <p id="score" class="text-3xl font-bold text-amber-500 mb-2">0 🪙</p>
+              <div class="w-full max-w-xs mx-auto mb-2">
+                <p class="text-sm font-medium text-blue-600 mb-1">Энергия ⚡</p>
+                <div class="progress-bar">
+                  <div id="energy-bar" class="progress-fill" style="width: 100%;"></div>
+                </div>
+                <p id="energy-text" class="text-sm text-right mt-1 text-gray-600">100/100</p>
+              </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-4 w-full max-w-md">
+              <button onclick="tap()" class="bg-gradient-to-r from-purple-500 to-pink-500 hover:from-purple-600 hover:to-pink-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105">
+                <i class="fas fa-hand-point-up mr-2"></i>Кликнуть
+              </button>
+              <button onclick="openAirdrop()" class="bg-gradient-to-r from-amber-400 to-orange-500 hover:from-amber-500 hover:to-orange-600 text-white font-bold py-3 px-4 rounded-xl shadow-md transition-all duration-200 transform hover:scale-105">
+                <i class="fas fa-gift mr-2"></i>Airdrop
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Правая колонка - Магазин и бизнесы -->
+        <div class="bg-white rounded-2xl shadow-lg p-6">
+          <h2 class="text-xl font-bold text-purple-800 mb-4 flex items-center">
+            <i class="fas fa-store mr-2"></i> Магазин
+          </h2>
+          
+          <div class="flex border-b border-gray-200 mb-4">
+            <button id="tab-upgrades" class="tab-button active flex-1 py-2 text-center font-medium" onclick="switchTab('upgrades')">
+              <i class="fas fa-tools mr-1"></i> Улучшения
+            </button>
+            <button id="tab-skins" class="tab-button flex-1 py-2 text-center font-medium" onclick="switchTab('skins')">
+              <i class="fas fa-palette mr-1"></i> Скины
+            </button>
+            <button id="tab-businesses" class="tab-button flex-1 py-2 text-center font-medium" onclick="switchTab('businesses')">
+              <i class="fas fa-industry mr-1"></i> Бизнесы
+            </button>
+          </div>
+          
+          <div id="shop-upgrades" class="shop-tab">
+            <div class="shop-item bg-gray-50 p-4 rounded-lg mb-3">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="font-bold text-gray-800">Улучшение клика</h3>
+                  <p class="text-sm text-gray-600">+1 к монетам за клик</p>
+                  <div class="flex items-center mt-1">
+                    <span class="badge bg-purple-100 text-purple-800">Ур. <span id="upgrade-level">0</span></span>
+                    <span class="text-amber-600 font-bold ml-2"><i class="fas fa-coins mr-1"></i> <span id="upgrade-cost">50</span></span>
+                  </div>
+                </div>
+                <button onclick="buyUpgrade()" class="bg-purple-500 hover:bg-purple-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                  Купить
+                </button>
+              </div>
+            </div>
+            
+            <div class="shop-item bg-gray-50 p-4 rounded-lg">
+              <div class="flex justify-between items-center">
+                <div>
+                  <h3 class="font-bold text-gray-800">Улучшение энергии</h3>
+                  <p class="text-sm text-gray-600">+20 к максимальной энергии</p>
+                  <div class="flex items-center mt-1">
+                    <span class="badge bg-blue-100 text-blue-800">Ур. <span id="energy-upgrade-level">0</span></span>
+                    <span class="text-amber-600 font-bold ml-2"><i class="fas fa-coins mr-1"></i> <span id="energy-upgrade-cost">50</span></span>
+                  </div>
+                </div>
+                <button onclick="buyEnergyUpgrade()" class="bg-blue-500 hover:bg-blue-600 text-white py-2 px-4 rounded-lg font-medium transition-colors">
+                  Купить
+                </button>
+              </div>
+            </div>
+          </div>
+          
+          <div id="shop-skins" class="shop-tab hidden">
+            <div id="skins-list" class="space-y-3"></div>
+          </div>
+          
+          <div id="shop-businesses" class="shop-tab hidden">
+            <p class="text-sm text-gray-600 mb-3">Доход начисляется автоматически каждую секунду</p>
+            <div id="businesses-list" class="space-y-3"></div>
+          </div>
+        </div>
       </div>
-      
-      <form id="airdrop-form" class="p-6">
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">ID аккаунта</label>
-          <input type="text" id="airdrop-id" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100" readonly />
+
+      <!-- Уведомление -->
+      <div id="notification" class="notification">
+        <div class="flex items-start">
+          <div id="notification-icon" class="mr-3 text-xl"></div>
+          <div>
+            <h3 id="notification-title" class="font-bold"></h3>
+            <p id="notification-message" class="text-sm"></p>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Модальное окно Airdrop -->
+    <div id="airdrop-modal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50 hidden">
+      <div class="bg-white rounded-xl shadow-2xl max-w-md w-full mx-4 overflow-hidden">
+        <div class="bg-amber-400 p-4 flex justify-between items-center">
+          <h2 class="text-xl font-bold text-white"><i class="fas fa-gift mr-2"></i> Запрос на Airdrop</h2>
+          <button onclick="closeAirdrop()" class="text-white hover:text-amber-100 text-xl">
+            <i class="fas fa-times"></i>
+          </button>
         </div>
         
-        <div class="mb-4">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Почему ты хочешь получить airdrop?</label>
-          <textarea id="airdrop-reason" class="w-full p-3 border border-gray-300 rounded-lg" rows="3" required></textarea>
-        </div>
-        
-        <div class="mb-6">
-          <label class="block text-sm font-medium text-gray-700 mb-1">Сколько монет ты хочешь?</label>
-          <input type="number" id="airdrop-amount" class="w-full p-3 border border-gray-300 rounded-lg" min="1" required />
-        </div>
-        
-        <button type="submit" class="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
-          <span id="submit-text">Отправить запрос</span>
-          <div id="loader" class="loader ml-2 hidden"></div>
-        </button>
-      </form>
+        <form id="airdrop-form" class="p-6">
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">ID аккаунта</label>
+            <input type="text" id="airdrop-id" class="w-full p-3 border border-gray-300 rounded-lg bg-gray-100" readonly />
+          </div>
+          
+          <div class="mb-4">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Почему ты хочешь получить airdrop?</label>
+            <textarea id="airdrop-reason" class="w-full p-3 border border-gray-300 rounded-lg" rows="3" required></textarea>
+          </div>
+          
+          <div class="mb-6">
+            <label class="block text-sm font-medium text-gray-700 mb-1">Сколько монет ты хочешь?</label>
+            <input type="number" id="airdrop-amount" class="w-full p-3 border border-gray-300 rounded-lg" min="1" required />
+          </div>
+          
+          <button type="submit" class="w-full bg-amber-400 hover:bg-amber-500 text-white font-bold py-3 px-4 rounded-lg transition-colors flex items-center justify-center">
+            <span id="submit-text">Отправить запрос</span>
+            <div id="loader" class="loader ml-2 hidden"></div>
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+
+  <!-- Состояние загрузки -->
+  <div id="loading-screen" class="fixed inset-0 bg-gradient-to-br from-purple-100 to-pink-100 flex items-center justify-center z-50">
+    <div class="text-center">
+      <div class="animate-spin rounded-full h-16 w-16 border-b-4 border-purple-600 mx-auto mb-4"></div>
+      <h2 class="text-2xl font-bold text-purple-800 mb-2">Загрузка KotoKombat...</h2>
+      <p class="text-purple-600" id="loading-text">Подключаемся к серверу</p>
     </div>
   </div>
 
   <script>
+    // Глобальные переменные
+    let userId = null;
+    let userDocRef = null;
+    let isBanned = false;
+    
     // Конфигурация
     const DISCORD_WEBHOOK = "https://discord.com/api/webhooks/1340000403462422528/1on5uXxAxOrHfdMWtVlboXGJIAOpbg0dyHs8ovPKysDHZEIg4IuIiCSRj7ErXGefGP18";
-    const userId = localStorage.getItem("user_id") || Math.floor(100000 + Math.random() * 900000);
-    localStorage.setItem("user_id", userId);
-    document.getElementById("uid").innerText = userId;
-
+    
     // Данные игры
     const skins = [
-  { 
-    id: 0, 
-    name: "Котокролик 🐰😼", 
-    image: "images/kotokrolik.jpg", // или .jpg/.webp в зависимости от формата
-    owned: true, 
-    price: 0 
-  },
-  { 
-    id: 1, 
-    name: "Котокролитка 🎀", 
-    image: "images/kotokrolitka.jpg", // или .jpg/.webp
-    owned: false, 
-    price: 50 
-  }
-];
+      { 
+        id: 0, 
+        name: "Котокролик 🐰😼", 
+        image: "images/kotokrolik.jpg", 
+        owned: true, 
+        price: 0 
+      },
+      { 
+        id: 1, 
+        name: "Котокролитка 🎀", 
+        image: "images/kotokrolitka.jpg", 
+        owned: false, 
+        price: 50 
+      }
+    ];
 
     const businesses = [
       { id: 0, name: "Кофейня ☕", price: 100, income: 1, owned: false, icon: "fa-mug-hot" },
@@ -355,19 +446,240 @@
       { id: 5, name: "Торговый центр 🛍️", price: 50000, income: 1000, owned: false, icon: "fa-shopping-cart" }
     ];
 
-    // Состояние игры
-    let score = parseInt(localStorage.getItem("score")) || 0;
-    let maxEnergy = parseInt(localStorage.getItem("maxEnergy")) || 100;
-    let energy = parseInt(localStorage.getItem("energy")) || maxEnergy;
-    let coinsPerClick = parseInt(localStorage.getItem("cpc")) || 1;
-    let currentSkin = parseInt(localStorage.getItem("skin")) || 0;
-    let upgradeLevel = parseInt(localStorage.getItem("upgradeLevel")) || 0;
-    let upgradeCost = parseInt(localStorage.getItem("upgradeCost")) || 50;
-    let energyUpgradeLevel = parseInt(localStorage.getItem("energyUpgradeLevel")) || 0;
-    let energyUpgradeCost = parseInt(localStorage.getItem("energyUpgradeCost")) || 50;
+    // Состояние игры (теперь только в Firebase)
+    let gameData = {
+      score: 0,
+      energy: 100,
+      maxEnergy: 100,
+      coinsPerClick: 1,
+      currentSkin: 0,
+      upgradeLevel: 0,
+      upgradeCost: 50,
+      energyUpgradeLevel: 0,
+      energyUpgradeCost: 50
+    };
 
-    // Инициализация скинов и бизнесов
-    function initSkinsFromStorage() {
+    // ========================
+    // Firebase функции
+    // ========================
+
+    async function initFirebase() {
+      try {
+        updateLoadingText("Подключение к серверу...");
+        
+        const { signInAnonymously, onAuthStateChanged, doc, getDoc, setDoc, onSnapshot, updateDoc } = window.firebaseApp;
+        
+        // Анонимная аутентификация
+        const authResult = await signInAnonymously(auth);
+        userId = authResult.user.uid;
+        userDocRef = doc(db, "users", userId);
+        
+        // Проверяем статус бана и загружаем данные
+        await checkBanStatus();
+        await loadGameData();
+        
+        // Настраиваем слушатель в реальном времени
+        setupRealtimeListener();
+        
+        // Показываем игру
+        setTimeout(() => {
+          document.getElementById("loading-screen").style.display = "none";
+          initGame();
+        }, 500);
+        
+      } catch (error) {
+        console.error("Ошибка Firebase:", error);
+        showNotification("Ошибка подключения", "Игра будет работать локально", "error");
+        initLocalStorage();
+      }
+    }
+
+    async function checkBanStatus() {
+      try {
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          if (data.banned) {
+            isBanned = true;
+            showBanModal(data.banReason || "Нарушение правил игры");
+            updateBanStatus(true);
+            return false;
+          }
+        }
+        
+        updateBanStatus(false);
+        return true;
+      } catch (error) {
+        console.error("Ошибка проверки бана:", error);
+        return true;
+      }
+    }
+
+    async function loadGameData() {
+      try {
+        const userDoc = await getDoc(userDocRef);
+        
+        if (userDoc.exists()) {
+          const data = userDoc.data();
+          
+          // Загружаем основные данные
+          gameData.score = data.score || 0;
+          gameData.energy = data.energy || 100;
+          gameData.maxEnergy = data.maxEnergy || 100;
+          gameData.coinsPerClick = data.coinsPerClick || 1;
+          gameData.currentSkin = data.currentSkin || 0;
+          gameData.upgradeLevel = data.upgradeLevel || 0;
+          gameData.upgradeCost = data.upgradeCost || 50;
+          gameData.energyUpgradeLevel = data.energyUpgradeLevel || 0;
+          gameData.energyUpgradeCost = data.energyUpgradeCost || 50;
+          
+          // Загружаем скины
+          if (data.skins && Array.isArray(data.skins)) {
+            data.skins.forEach(savedSkin => {
+              const skin = skins.find(s => s.id === savedSkin.id);
+              if (skin) skin.owned = savedSkin.owned;
+            });
+          }
+          
+          // Загружаем бизнесы
+          if (data.businesses && Array.isArray(data.businesses)) {
+            data.businesses.forEach(savedBusiness => {
+              const business = businesses.find(b => b.id === savedBusiness.id);
+              if (business) business.owned = savedBusiness.owned;
+            });
+          }
+          
+        } else {
+          // Создаем нового пользователя
+          await createNewUser();
+        }
+        
+        // Показываем ID пользователя
+        document.getElementById("uid").textContent = userId.substring(0, 8) + "...";
+        
+      } catch (error) {
+        console.error("Ошибка загрузки данных:", error);
+      }
+    }
+
+    async function createNewUser() {
+      try {
+        const initialData = {
+          uid: userId,
+          score: 0,
+          energy: 100,
+          maxEnergy: 100,
+          coinsPerClick: 1,
+          currentSkin: 0,
+          upgradeLevel: 0,
+          upgradeCost: 50,
+          energyUpgradeLevel: 0,
+          energyUpgradeCost: 50,
+          skins: skins.map(skin => ({ id: skin.id, owned: skin.id === 0 })),
+          businesses: businesses.map(b => ({ id: b.id, owned: false })),
+          banned: false,
+          banReason: "",
+          createdAt: new Date().toISOString(),
+          lastLogin: new Date().toISOString()
+        };
+        
+        await setDoc(userDocRef, initialData);
+        console.log("Новый пользователь создан в Firebase");
+        
+      } catch (error) {
+        console.error("Ошибка создания пользователя:", error);
+      }
+    }
+
+    async function saveGameData() {
+      if (!userDocRef || isBanned) return;
+      
+      try {
+        const saveData = {
+          score: gameData.score,
+          energy: gameData.energy,
+          maxEnergy: gameData.maxEnergy,
+          coinsPerClick: gameData.coinsPerClick,
+          currentSkin: gameData.currentSkin,
+          upgradeLevel: gameData.upgradeLevel,
+          upgradeCost: gameData.upgradeCost,
+          energyUpgradeLevel: gameData.energyUpgradeLevel,
+          energyUpgradeCost: gameData.energyUpgradeCost,
+          skins: skins.map(skin => ({ id: skin.id, owned: skin.owned })),
+          businesses: businesses.map(b => ({ id: b.id, owned: b.owned })),
+          lastLogin: new Date().toISOString()
+        };
+        
+        await updateDoc(userDocRef, saveData);
+        
+      } catch (error) {
+        console.error("Ошибка сохранения в Firebase:", error);
+      }
+    }
+
+    function setupRealtimeListener() {
+      // Слушаем изменения статуса бана в реальном времени
+      onSnapshot(userDocRef, (doc) => {
+        if (doc.exists()) {
+          const data = doc.data();
+          
+          if (data.banned && !isBanned) {
+            isBanned = true;
+            showBanModal(data.banReason || "Нарушение правил игры");
+            updateBanStatus(true);
+          } else if (!data.banned && isBanned) {
+            isBanned = false;
+            hideBanModal();
+            updateBanStatus(false);
+          }
+        }
+      });
+    }
+
+    function updateBanStatus(banned) {
+      const banStatus = document.getElementById("ban-status");
+      if (banned) {
+        banStatus.textContent = "Статус: Забанен";
+        banStatus.className = "text-xs px-2 py-1 rounded bg-red-100 text-red-800 mt-1";
+      } else {
+        banStatus.textContent = "Статус: Активен";
+        banStatus.className = "text-xs px-2 py-1 rounded bg-green-100 text-green-800 mt-1";
+      }
+    }
+
+    function showBanModal(reason) {
+      document.getElementById("ban-reason").textContent = reason;
+      document.getElementById("ban-modal").classList.remove("hidden");
+      document.getElementById("game-content").classList.add("hidden");
+    }
+
+    function hideBanModal() {
+      document.getElementById("ban-modal").classList.add("hidden");
+      document.getElementById("game-content").classList.remove("hidden");
+    }
+
+    // ========================
+    // Локальное сохранение (fallback)
+    // ========================
+
+    function initLocalStorage() {
+      userId = "local_" + Math.floor(100000 + Math.random() * 900000);
+      document.getElementById("uid").textContent = userId;
+      updateBanStatus(false);
+      
+      // Загружаем из localStorage
+      gameData.score = parseInt(localStorage.getItem("score")) || 0;
+      gameData.energy = parseInt(localStorage.getItem("energy")) || 100;
+      gameData.maxEnergy = parseInt(localStorage.getItem("maxEnergy")) || 100;
+      gameData.coinsPerClick = parseInt(localStorage.getItem("cpc")) || 1;
+      gameData.currentSkin = parseInt(localStorage.getItem("skin")) || 0;
+      gameData.upgradeLevel = parseInt(localStorage.getItem("upgradeLevel")) || 0;
+      gameData.upgradeCost = parseInt(localStorage.getItem("upgradeCost")) || 50;
+      gameData.energyUpgradeLevel = parseInt(localStorage.getItem("energyUpgradeLevel")) || 0;
+      gameData.energyUpgradeCost = parseInt(localStorage.getItem("energyUpgradeCost")) || 50;
+      
+      // Скины
       const savedSkins = localStorage.getItem("skins");
       if (savedSkins) {
         const parsedSkins = JSON.parse(savedSkins);
@@ -378,12 +690,34 @@
           }
         });
       }
-    }
-
-    function initBusinessesFromStorage() {
+      
+      // Бизнесы
       businesses.forEach(b => {
         const ownedStored = localStorage.getItem(`business-owned-${b.id}`);
         if (ownedStored !== null) b.owned = ownedStored === "true";
+      });
+      
+      setTimeout(() => {
+        document.getElementById("loading-screen").style.display = "none";
+        initGame();
+      }, 500);
+    }
+
+    function saveLocalData() {
+      localStorage.setItem("score", gameData.score);
+      localStorage.setItem("energy", gameData.energy);
+      localStorage.setItem("maxEnergy", gameData.maxEnergy);
+      localStorage.setItem("cpc", gameData.coinsPerClick);
+      localStorage.setItem("skin", gameData.currentSkin);
+      localStorage.setItem("upgradeLevel", gameData.upgradeLevel);
+      localStorage.setItem("upgradeCost", gameData.upgradeCost);
+      localStorage.setItem("energyUpgradeLevel", gameData.energyUpgradeLevel);
+      localStorage.setItem("energyUpgradeCost", gameData.energyUpgradeCost);
+      
+      localStorage.setItem("skins", JSON.stringify(skins.map(s => ({ id: s.id, owned: s.owned }))));
+      
+      businesses.forEach(b => {
+        localStorage.setItem(`business-owned-${b.id}`, b.owned);
       });
     }
 
@@ -391,13 +725,17 @@
     // Вспомогательные функции
     // ========================
 
+    function updateLoadingText(text) {
+      const loadingText = document.getElementById("loading-text");
+      if (loadingText) loadingText.textContent = text;
+    }
+
     function showNotification(title, message, type = "info") {
       const notification = document.getElementById("notification");
       const iconElem = document.getElementById("notification-icon");
       const titleElem = document.getElementById("notification-title");
       const messageElem = document.getElementById("notification-message");
       
-      // Устанавливаем иконку в зависимости от типа уведомления
       switch(type) {
         case "success":
           iconElem.className = "fas fa-check-circle text-green-500";
@@ -417,7 +755,6 @@
       
       notification.classList.add("show");
       
-      // Автоматически скрываем уведомление через 3 секунды
       setTimeout(() => {
         notification.classList.remove("show");
       }, 3000);
@@ -427,30 +764,26 @@
       const floatingCoins = document.getElementById("floating-coins");
       const coin = document.createElement("div");
       coin.className = "floating-coin";
-      coin.innerHTML = `<i class="fas fa-coin"></i> +${coinsPerClick}`;
+      coin.innerHTML = `<i class="fas fa-coin"></i> +${gameData.coinsPerClick}`;
       coin.style.left = `${x}px`;
       coin.style.top = `${y}px`;
       
       floatingCoins.appendChild(coin);
       
-      // Удаляем элемент после завершения анимации
       setTimeout(() => {
         coin.remove();
       }, 1000);
     }
 
     function switchTab(tabName) {
-      // Убираем активный класс со всех кнопок
       document.querySelectorAll('.tab-button').forEach(btn => {
         btn.classList.remove('active');
       });
       
-      // Скрываем все вкладки
       document.querySelectorAll('.shop-tab').forEach(tab => {
         tab.classList.add('hidden');
       });
       
-      // Активируем выбранную кнопку и показываем выбранную вкладку
       document.getElementById(`tab-${tabName}`).classList.add('active');
       document.getElementById(`shop-${tabName}`).classList.remove('hidden');
     }
@@ -459,37 +792,16 @@
     // Основные функции игры
     // ========================
 
-    function saveGame() {
-      localStorage.setItem("score", score);
-      localStorage.setItem("energy", energy);
-      localStorage.setItem("maxEnergy", maxEnergy);
-      localStorage.setItem("cpc", coinsPerClick);
-      localStorage.setItem("skin", currentSkin);
-      localStorage.setItem("upgradeLevel", upgradeLevel);
-      localStorage.setItem("upgradeCost", upgradeCost);
-      localStorage.setItem("energyUpgradeLevel", energyUpgradeLevel);
-      localStorage.setItem("energyUpgradeCost", energyUpgradeCost);
-      
-      // Сохраняем информацию о скинах
-      localStorage.setItem("skins", JSON.stringify(skins));
-      
-      // Сохраняем информацию о бизнесах
-      businesses.forEach(b => {
-        localStorage.setItem(`business-owned-${b.id}`, b.owned);
-      });
-    }
-
     function updateScore() {
-      document.getElementById("score").innerText = `${score} 🪙`;
+      document.getElementById("score").innerText = `${gameData.score} 🪙`;
     }
 
     function updateEnergy() {
-      const percent = (energy / maxEnergy) * 100;
+      const percent = (gameData.energy / gameData.maxEnergy) * 100;
       document.getElementById("energy-bar").style.width = `${percent}%`;
-      document.getElementById("energy-text").innerText = `${energy}/${maxEnergy}`;
+      document.getElementById("energy-text").innerText = `${gameData.energy}/${gameData.maxEnergy}`;
       
-      // Анимация тряски при низкой энергии
-      if (energy < 20) {
+      if (gameData.energy < 20) {
         document.getElementById("energy-bar").classList.add('energy-low');
       } else {
         document.getElementById("energy-bar").classList.remove('energy-low');
@@ -498,23 +810,25 @@
 
     function updateSkin() {
       const img = document.getElementById("kotokrolik-img");
-      img.src = skins[currentSkin].image;
-      document.getElementById("kotokrolik-name").innerText = skins[currentSkin].name;
+      const currentSkinData = skins[gameData.currentSkin];
+      img.src = currentSkinData.image;
+      document.getElementById("kotokrolik-name").innerText = currentSkinData.name;
     }
 
     function updateUpgradeDisplay() {
-      document.getElementById("upgrade-level").innerText = upgradeLevel;
-      document.getElementById("upgrade-cost").innerText = upgradeCost;
-      document.getElementById("energy-upgrade-level").innerText = energyUpgradeLevel;
-      document.getElementById("energy-upgrade-cost").innerText = energyUpgradeCost;
+      document.getElementById("upgrade-level").innerText = gameData.upgradeLevel;
+      document.getElementById("upgrade-cost").innerText = gameData.upgradeCost;
+      document.getElementById("energy-upgrade-level").innerText = gameData.energyUpgradeLevel;
+      document.getElementById("energy-upgrade-cost").innerText = gameData.energyUpgradeCost;
     }
 
     function tap(event) {
-      if (energy > 0) {
-        score += coinsPerClick;
-        energy--;
+      if (isBanned) return;
+      
+      if (gameData.energy > 0) {
+        gameData.score += gameData.coinsPerClick;
+        gameData.energy--;
         
-        // Создаем летающую монетку
         if (event) {
           const rect = document.getElementById("character-container").getBoundingClientRect();
           const x = event.clientX - rect.left;
@@ -524,69 +838,66 @@
         
         updateScore();
         updateEnergy();
-        saveGame();
+        if (userDocRef) {
+          saveGameData();
+        } else {
+          saveLocalData();
+        }
       } else {
         showNotification("Недостаточно энергии!", "Подожди, пока энергия восстановится", "warning");
       }
     }
 
-    // Восстановление энергии
-    setInterval(() => {
-      if (energy < maxEnergy) {
-        energy += 1;
-        updateEnergy();
-        saveGame();
-      }
-    }, 1000);
-
-    // Пассивный доход
-    setInterval(() => {
-      let income = businesses.reduce((sum, b) => sum + (b.owned ? b.income : 0), 0);
-      if (income > 0) {
-        score += income;
-        updateScore();
-        saveGame();
-      }
-    }, 1000);
-
-    // ========================
-    // Магазины
-    // ========================
-
-    // Апгрейды
-    document.getElementById("buy-upgrade-btn").addEventListener("click", () => {
-      if (score >= upgradeCost) {
-        score -= upgradeCost;
-        coinsPerClick++;
-        upgradeLevel++;
-        upgradeCost = Math.floor(upgradeCost * 1.5);
+    function buyUpgrade() {
+      if (isBanned) return;
+      
+      if (gameData.score >= gameData.upgradeCost) {
+        gameData.score -= gameData.upgradeCost;
+        gameData.coinsPerClick++;
+        gameData.upgradeLevel++;
+        gameData.upgradeCost = Math.floor(gameData.upgradeCost * 1.5);
+        
         updateScore();
         updateUpgradeDisplay();
-        saveGame();
-        showNotification("Улучшение куплено!", `Теперь за клик: ${coinsPerClick} монет`, "success");
+        if (userDocRef) {
+          saveGameData();
+        } else {
+          saveLocalData();
+        }
+        showNotification("Улучшение куплено!", `Теперь за клик: ${gameData.coinsPerClick} монет`, "success");
       } else {
         showNotification("Недостаточно монет!", "Заработай больше монет, чтобы купить улучшение", "error");
       }
-    });
+    }
 
-    document.getElementById("buy-energy-upgrade-btn").addEventListener("click", () => {
-      if (score >= energyUpgradeCost) {
-        score -= energyUpgradeCost;
-        energyUpgradeLevel++;
-        maxEnergy += 20;
-        energy = maxEnergy;
-        energyUpgradeCost = Math.floor(energyUpgradeCost * 1.5);
+    function buyEnergyUpgrade() {
+      if (isBanned) return;
+      
+      if (gameData.score >= gameData.energyUpgradeCost) {
+        gameData.score -= gameData.energyUpgradeCost;
+        gameData.energyUpgradeLevel++;
+        gameData.maxEnergy += 20;
+        gameData.energy = gameData.maxEnergy;
+        gameData.energyUpgradeCost = Math.floor(gameData.energyUpgradeCost * 1.5);
+        
         updateScore();
         updateEnergy();
         updateUpgradeDisplay();
-        saveGame();
-        showNotification("Энергия улучшена!", `Макс. энергия увеличена до ${maxEnergy}`, "success");
+        if (userDocRef) {
+          saveGameData();
+        } else {
+          saveLocalData();
+        }
+        showNotification("Энергия улучшена!", `Макс. энергия увеличена до ${gameData.maxEnergy}`, "success");
       } else {
         showNotification("Недостаточно монет!", "Заработай больше монет, чтобы купить улучшение", "error");
       }
-    });
+    }
 
-    // Скины
+    // ========================
+    // Скины (старая система)
+    // ========================
+
     function renderSkins() {
       const skinsList = document.getElementById("skins-list");
       skinsList.innerHTML = "";
@@ -597,7 +908,7 @@
         
         skinElem.innerHTML = `
           <div class="flex items-center">
-            <img src="${skin.image}" class="w-16 h-16 rounded-lg object-cover mr-4 border-2 ${currentSkin === i ? 'border-purple-500' : 'border-gray-300'}">
+            <img src="${skin.image}" class="w-16 h-16 rounded-lg object-cover mr-4 border-2 ${gameData.currentSkin === i ? 'border-purple-500' : 'border-gray-300'}" onerror="this.src='https://placekitten.com/100/100'">
             <div class="flex-1">
               <h3 class="font-bold text-gray-800">${skin.name}</h3>
               <div class="flex items-center mt-1">
@@ -608,48 +919,61 @@
               </div>
             </div>
             <button class="${skin.owned ? 
-              (currentSkin === i ? 
+              (gameData.currentSkin === i ? 
                 'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default' : 
                 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg') : 
-              (score >= skin.price ? 
+              (gameData.score >= skin.price ? 
                 'bg-amber-500 hover:bg-amber-600 text-white px-4 py-2 rounded-lg' : 
                 'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default')
             }">
               ${skin.owned ? 
-                (currentSkin === i ? 'Выбрано' : 'Выбрать') : 
-                (score >= skin.price ? 'Купить' : 'Недостаточно')
+                (gameData.currentSkin === i ? 'Выбрано' : 'Выбрать') : 
+                (gameData.score >= skin.price ? 'Купить' : 'Недостаточно')
               }
             </button>
           </div>
         `;
         
         const button = skinElem.querySelector("button");
-        if (!skin.owned || currentSkin !== i) {
-          button.addEventListener("click", () => {
-            if (skin.owned) {
-              currentSkin = i;
+        button.addEventListener("click", () => {
+          if (isBanned) return;
+          
+          if (skin.owned) {
+            if (gameData.currentSkin !== i) {
+              gameData.currentSkin = i;
               updateSkin();
-              saveGame();
+              if (userDocRef) {
+                saveGameData();
+              } else {
+                saveLocalData();
+              }
               renderSkins();
               showNotification("Скин изменен!", `Теперь ты ${skin.name}`, "success");
-            } else if (score >= skin.price) {
-              score -= skin.price;
-              skin.owned = true;
-              currentSkin = i;
-              updateScore();
-              updateSkin();
-              saveGame();
-              renderSkins();
-              showNotification("Скин куплен!", `Теперь ты ${skin.name}`, "success");
             }
-          });
-        }
+          } else if (gameData.score >= skin.price) {
+            gameData.score -= skin.price;
+            skin.owned = true;
+            gameData.currentSkin = i;
+            updateScore();
+            updateSkin();
+            if (userDocRef) {
+              saveGameData();
+            } else {
+              saveLocalData();
+            }
+            renderSkins();
+            showNotification("Скин куплен!", `Теперь ты ${skin.name}`, "success");
+          }
+        });
         
         skinsList.appendChild(skinElem);
       });
     }
 
+    // ========================
     // Бизнесы
+    // ========================
+
     function renderBusinesses() {
       const busList = document.getElementById("businesses-list");
       busList.innerHTML = "";
@@ -675,11 +999,11 @@
             </div>
             <button class="${bus.owned ? 
               'bg-green-500 text-white px-4 py-2 rounded-lg cursor-default' : 
-              (score >= bus.price ? 
+              (gameData.score >= bus.price ? 
                 'bg-purple-500 hover:bg-purple-600 text-white px-4 py-2 rounded-lg' : 
                 'bg-gray-400 text-white px-4 py-2 rounded-lg cursor-default')
             }">
-              ${bus.owned ? 'Куплено' : (score >= bus.price ? 'Купить' : 'Недостаточно')}
+              ${bus.owned ? 'Куплено' : (gameData.score >= bus.price ? 'Купить' : 'Недостаточно')}
             </button>
           </div>
         `;
@@ -687,11 +1011,17 @@
         const button = busElem.querySelector("button");
         if (!bus.owned) {
           button.addEventListener("click", () => {
-            if (score >= bus.price) {
-              score -= bus.price;
+            if (isBanned) return;
+            
+            if (gameData.score >= bus.price) {
+              gameData.score -= bus.price;
               bus.owned = true;
               updateScore();
-              saveGame();
+              if (userDocRef) {
+                saveGameData();
+              } else {
+                saveLocalData();
+              }
               renderBusinesses();
               showNotification("Бизнес куплен!", `Ты приобрел ${bus.name}`, "success");
             }
@@ -707,6 +1037,8 @@
     // ========================
 
     function openAirdrop() {
+      if (isBanned) return;
+      
       document.getElementById("airdrop-id").value = userId;
       document.getElementById("airdrop-modal").classList.remove("hidden");
     }
@@ -737,60 +1069,58 @@
       }
     }
 
-    document.getElementById("airdrop-form").addEventListener("submit", async (e) => {
-      e.preventDefault();
-      
-      const submitBtn = document.querySelector("#airdrop-form button[type='submit']");
-      const submitText = document.getElementById("submit-text");
-      const loader = document.getElementById("loader");
-      
-      const reason = document.getElementById("airdrop-reason").value.trim();
-      const amount = document.getElementById("airdrop-amount").value;
+    function initAirdrop() {
+      document.getElementById("airdrop-form").addEventListener("submit", async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.querySelector("#airdrop-form button[type='submit']");
+        const submitText = document.getElementById("submit-text");
+        const loader = document.getElementById("loader");
+        
+        const reason = document.getElementById("airdrop-reason").value.trim();
+        const amount = document.getElementById("airdrop-amount").value;
 
-      // Показываем загрузку
-      submitText.textContent = "Отправка...";
-      loader.classList.remove("hidden");
-      submitBtn.disabled = true;
+        // Показываем загрузку
+        submitText.textContent = "Отправка...";
+        loader.classList.remove("hidden");
+        submitBtn.disabled = true;
 
-      // Отправляем данные
-      const success = await sendToDiscord({
-        id: userId,
-        reason: reason,
-        amount: amount
+        // Отправляем данные
+        const success = await sendToDiscord({
+          id: userId,
+          reason: reason,
+          amount: amount
+        });
+
+        // Возвращаем кнопку в исходное состояние
+        if (success) {
+          submitText.textContent = "Отправлено!";
+          loader.classList.add("hidden");
+          
+          setTimeout(() => {
+            closeAirdrop();
+            submitText.textContent = "Отправить запрос";
+            submitBtn.disabled = false;
+            showNotification("Запрос отправлен!", "Ожидайте одобрения администратора", "success");
+          }, 1500);
+        } else {
+          submitText.textContent = "Ошибка!";
+          loader.classList.add("hidden");
+          
+          setTimeout(() => {
+            submitText.textContent = "Отправить запрос";
+            submitBtn.disabled = false;
+            showNotification("Ошибка отправки", "Попробуйте позже", "error");
+          }, 1500);
+        }
       });
-
-      // Возвращаем кнопку в исходное состояние
-      if (success) {
-        submitText.textContent = "Отправлено!";
-        loader.classList.add("hidden");
-        
-        setTimeout(() => {
-          closeAirdrop();
-          submitText.textContent = "Отправить запрос";
-          submitBtn.disabled = false;
-          showNotification("Запрос отправлен!", "Ожидайте одобрения администратора", "success");
-        }, 1500);
-      } else {
-        submitText.textContent = "Ошибка!";
-        loader.classList.add("hidden");
-        
-        setTimeout(() => {
-          submitText.textContent = "Отправить запрос";
-          submitBtn.disabled = false;
-          showNotification("Ошибка отправки", "Попробуйте позже", "error");
-        }, 1500);
-      }
-    });
+    }
 
     // ========================
     // Инициализация игры
     // ========================
 
-    function init() {
-      // Загружаем сохраненные данные
-      initSkinsFromStorage();
-      initBusinessesFromStorage();
-      
+    function initGame() {
       updateScore();
       updateEnergy();
       updateUpgradeDisplay();
@@ -800,9 +1130,55 @@
       
       // Обработчик клика по персонажу
       document.getElementById("character-container").addEventListener("click", tap);
+      
+      // Инициализация airdrop
+      initAirdrop();
+      
+      // Восстановление энергии
+      setInterval(() => {
+        if (gameData.energy < gameData.maxEnergy) {
+          gameData.energy += 1;
+          updateEnergy();
+          if (userDocRef) {
+            saveGameData();
+          } else {
+            saveLocalData();
+          }
+        }
+      }, 1000);
+      
+      // Пассивный доход
+      setInterval(() => {
+        if (isBanned) return;
+        
+        let income = businesses.reduce((sum, b) => sum + (b.owned ? b.income : 0), 0);
+        if (income > 0) {
+          gameData.score += income;
+          updateScore();
+          if (userDocRef) {
+            saveGameData();
+          } else {
+            saveLocalData();
+          }
+        }
+      }, 1000);
     }
 
-    init();
+    // ========================
+    // Запуск приложения
+    // ========================
+
+    // Ждем загрузки Firebase
+    setTimeout(() => {
+      if (window.firebaseApp) {
+        initFirebase();
+      } else {
+        updateLoadingText("Firebase не загрузился, используем локальное сохранение");
+        setTimeout(() => {
+          initLocalStorage();
+        }, 1000);
+      }
+    }, 1000);
   </script>
 </body>
 </html>
