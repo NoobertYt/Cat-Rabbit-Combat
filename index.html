@@ -7,55 +7,10 @@
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   
-  <!-- Firebase SDKs -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-    import { 
-      getFirestore, 
-      doc, 
-      getDoc, 
-      setDoc,
-      updateDoc,
-      onSnapshot
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-    import { 
-      getAuth, 
-      onAuthStateChanged,
-      signInAnonymously
-    } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-
-    // Конфигурация Firebase
-    const firebaseConfig = {
-      apiKey: "AIzaSyD6b72LrwHZbIslrfVNjwTTJnC8Fu-bkwU",
-      authDomain: "kotocrol-d9f49.firebaseapp.com",
-      projectId: "kotocrol-d9f49",
-      storageBucket: "kotocrol-d9f49.firebasestorage.app",
-      messagingSenderId: "559692109036",
-      appId: "1:559692109036:web:c4b63571b26dfe3f14c1c9",
-      measurementId: "G-ZS81P946ZM"
-    };
-
-    // Инициализация Firebase
-    const app = initializeApp(firebaseConfig);
-    const db = getFirestore(app);
-    const auth = getAuth(app);
-
-    // Экспортируем глобально
-    window.firebaseApp = {
-      app,
-      db,
-      auth,
-      getDoc,
-      setDoc,
-      updateDoc,
-      onSnapshot,
-      doc,
-      onAuthStateChanged,
-      signInAnonymously
-    };
-
-    console.log("Firebase инициализирован!");
-  </script>
+  <!-- Firebase SDK (важно загружать до инициализации) -->
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Comic+Neue:wght@400;700&display=swap');
@@ -264,7 +219,7 @@
         <div class="lg:col-span-2 bg-white rounded-2xl shadow-lg p-6">
           <div class="flex flex-col items-center justify-center">
             <div class="character-container relative mb-6" id="character-container">
-              <img id="kotokrolik-img" src="images/kotokrolik.jpg" class="character-img rounded-lg pulse" onerror="this.src='https://placekitten.com/200/200'">
+              <img id="kotokrolik-img" src="images/kotokrolik.jpg" class="character-img rounded-lg pulse" onerror="this.onerror=null; this.src='https://placekitten.com/200/200'">
               <div id="floating-coins"></div>
             </div>
             
@@ -411,7 +366,10 @@
   </div>
 
   <script>
-    // Глобальные переменные
+    // Глобальные переменные Firebase
+    let firebaseApp;
+    let db;
+    let auth;
     let userId = null;
     let userDocRef = null;
     let isBanned = false;
@@ -446,7 +404,7 @@
       { id: 5, name: "Торговый центр 🛍️", price: 50000, income: 1000, owned: false, icon: "fa-shopping-cart" }
     ];
 
-    // Состояние игры (теперь только в Firebase)
+    // Состояние игры
     let gameData = {
       score: 0,
       energy: 100,
@@ -460,19 +418,43 @@
     };
 
     // ========================
-    // Firebase функции
+    // Инициализация Firebase
     // ========================
 
     async function initFirebase() {
       try {
-        updateLoadingText("Подключение к серверу...");
+        updateLoadingText("Инициализация Firebase...");
         
-        const { signInAnonymously, onAuthStateChanged, doc, getDoc, setDoc, onSnapshot, updateDoc } = window.firebaseApp;
+        // Проверяем, загружены ли SDK Firebase
+        if (typeof firebase === 'undefined') {
+          throw new Error("Firebase SDK не загружен");
+        }
+        
+        // Конфигурация Firebase
+        const firebaseConfig = {
+          apiKey: "AIzaSyD6b72LrwHZbIslrfVNjwTTJnC8Fu-bkwU",
+          authDomain: "kotocrol-d9f49.firebaseapp.com",
+          projectId: "kotocrol-d9f49",
+          storageBucket: "kotocrol-d9f49.firebasestorage.app",
+          messagingSenderId: "559692109036",
+          appId: "1:559692109036:web:c4b63571b26dfe3f14c1c9",
+          measurementId: "G-ZS81P946ZM"
+        };
+        
+        // Инициализация
+        firebaseApp = firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+        
+        console.log("Firebase инициализирован!");
         
         // Анонимная аутентификация
-        const authResult = await signInAnonymously(auth);
+        updateLoadingText("Аутентификация...");
+        const authResult = await auth.signInAnonymously();
         userId = authResult.user.uid;
-        userDocRef = doc(db, "users", userId);
+        userDocRef = db.collection("users").doc(userId);
+        
+        updateLoadingText("Проверка статуса...");
         
         // Проверяем статус бана и загружаем данные
         await checkBanStatus();
@@ -484,21 +466,24 @@
         // Показываем игру
         setTimeout(() => {
           document.getElementById("loading-screen").style.display = "none";
+          document.getElementById("uid").textContent = userId.substring(0, 8) + "...";
           initGame();
         }, 500);
         
       } catch (error) {
         console.error("Ошибка Firebase:", error);
         showNotification("Ошибка подключения", "Игра будет работать локально", "error");
-        initLocalStorage();
+        setTimeout(() => {
+          initLocalStorage();
+        }, 1000);
       }
     }
 
     async function checkBanStatus() {
       try {
-        const userDoc = await getDoc(userDocRef);
+        const userDoc = await userDocRef.get();
         
-        if (userDoc.exists()) {
+        if (userDoc.exists) {
           const data = userDoc.data();
           if (data.banned) {
             isBanned = true;
@@ -518,9 +503,9 @@
 
     async function loadGameData() {
       try {
-        const userDoc = await getDoc(userDocRef);
+        const userDoc = await userDocRef.get();
         
-        if (userDoc.exists()) {
+        if (userDoc.exists) {
           const data = userDoc.data();
           
           // Загружаем основные данные
@@ -555,9 +540,6 @@
           await createNewUser();
         }
         
-        // Показываем ID пользователя
-        document.getElementById("uid").textContent = userId.substring(0, 8) + "...";
-        
       } catch (error) {
         console.error("Ошибка загрузки данных:", error);
       }
@@ -580,11 +562,11 @@
           businesses: businesses.map(b => ({ id: b.id, owned: false })),
           banned: false,
           banReason: "",
-          createdAt: new Date().toISOString(),
-          lastLogin: new Date().toISOString()
+          createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+          lastLogin: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        await setDoc(userDocRef, initialData);
+        await userDocRef.set(initialData);
         console.log("Новый пользователь создан в Firebase");
         
       } catch (error) {
@@ -608,10 +590,10 @@
           energyUpgradeCost: gameData.energyUpgradeCost,
           skins: skins.map(skin => ({ id: skin.id, owned: skin.owned })),
           businesses: businesses.map(b => ({ id: b.id, owned: b.owned })),
-          lastLogin: new Date().toISOString()
+          lastLogin: firebase.firestore.FieldValue.serverTimestamp()
         };
         
-        await updateDoc(userDocRef, saveData);
+        await userDocRef.update(saveData);
         
       } catch (error) {
         console.error("Ошибка сохранения в Firebase:", error);
@@ -620,8 +602,8 @@
 
     function setupRealtimeListener() {
       // Слушаем изменения статуса бана в реальном времени
-      onSnapshot(userDocRef, (doc) => {
-        if (doc.exists()) {
+      userDocRef.onSnapshot((doc) => {
+        if (doc.exists) {
           const data = doc.data();
           
           if (data.banned && !isBanned) {
@@ -664,6 +646,7 @@
     // ========================
 
     function initLocalStorage() {
+      updateLoadingText("Используем локальное сохранение...");
       userId = "local_" + Math.floor(100000 + Math.random() * 900000);
       document.getElementById("uid").textContent = userId;
       updateBanStatus(false);
@@ -812,6 +795,10 @@
       const img = document.getElementById("kotokrolik-img");
       const currentSkinData = skins[gameData.currentSkin];
       img.src = currentSkinData.image;
+      img.onerror = function() {
+        this.onerror = null;
+        this.src = 'https://placekitten.com/200/200';
+      };
       document.getElementById("kotokrolik-name").innerText = currentSkinData.name;
     }
 
@@ -908,7 +895,7 @@
         
         skinElem.innerHTML = `
           <div class="flex items-center">
-            <img src="${skin.image}" class="w-16 h-16 rounded-lg object-cover mr-4 border-2 ${gameData.currentSkin === i ? 'border-purple-500' : 'border-gray-300'}" onerror="this.src='https://placekitten.com/100/100'">
+            <img src="${skin.image}" class="w-16 h-16 rounded-lg object-cover mr-4 border-2 ${gameData.currentSkin === i ? 'border-purple-500' : 'border-gray-300'}" onerror="this.onerror=null; this.src='https://placekitten.com/100/100'">
             <div class="flex-1">
               <h3 class="font-bold text-gray-800">${skin.name}</h3>
               <div class="flex items-center mt-1">
@@ -1168,17 +1155,20 @@
     // Запуск приложения
     // ========================
 
-    // Ждем загрузки Firebase
-    setTimeout(() => {
-      if (window.firebaseApp) {
-        initFirebase();
-      } else {
-        updateLoadingText("Firebase не загрузился, используем локальное сохранение");
-        setTimeout(() => {
-          initLocalStorage();
-        }, 1000);
-      }
-    }, 1000);
+    // Ждем загрузки всех ресурсов
+    window.addEventListener('load', function() {
+      // Ждем немного, чтобы Firebase SDK точно загрузились
+      setTimeout(() => {
+        if (typeof firebase !== 'undefined' && firebase.app) {
+          initFirebase();
+        } else {
+          updateLoadingText("Firebase не загрузился, проверьте соединение...");
+          setTimeout(() => {
+            initLocalStorage();
+          }, 2000);
+        }
+      }, 500);
+    });
   </script>
 </body>
 </html>
